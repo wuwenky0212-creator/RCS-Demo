@@ -610,6 +610,7 @@
     "showPctBtn": "% 贡献占比",
     "exportBtn": "导出",
     "exportComingSoon": "导出功能开发中",
+    "exportSuccess": "导出成功",
     "distributionLabel": "分布情况",
     "dimHeader": "归因维度",
     "groupInit": "初始化",

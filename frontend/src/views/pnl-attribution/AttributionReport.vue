@@ -380,6 +380,7 @@ import { ElMessage } from 'element-plus'
 import { ArrowRight, HomeFilled, DataLine, Grid, PieChart, Download } from '@element-plus/icons-vue'
 import PnlSubNav from '@/components/PnlSubNav.vue'
 import { getScenario } from '@/api/pnl'
+import * as XLSX from 'xlsx'
 
 const route = useRoute()
 const { t, locale } = useI18n()
@@ -770,8 +771,182 @@ function getSummary({ columns }) {
   })
 }
 
+// ── 导出：将树形行展平为二维数组（含层级缩进前缀）────────────────────────────
+function flattenRows(rows, depth = 0) {
+  const result = []
+  for (const row of rows) {
+    // 层级缩进用全角空格表达（Excel 中可见）
+    const indent = '　'.repeat(depth)
+    let label = indent + (row._label || '')
+    if (row._sublabel) label += '  ' + row._sublabel
+    if (row._rowType === 'deal') {
+      label = indent + t(`pnlAttribution.${row.dealTypeKey}`) + ' · ' + (row._label || '')
+    }
+
+    const numOrDash = v => (v == null ? '' : v)
+
+    result.push({
+      _label:       label,
+      _plCurrency:  row._plCurrency || '',
+      modelPl:      numOrDash(row.modelPl),
+      timePl:       numOrDash(row.timePl),
+      spotPl:       numOrDash(row.spotPl),
+      yieldCurvePl: numOrDash(row.yieldCurvePl),
+      basisCurvePl: numOrDash(row.basisCurvePl),
+      volPl:        numOrDash(row.volPl),
+      fixingPl:     numOrDash(row.fixingPl),
+      conversionPl: numOrDash(row.conversionPl),
+      newDealPl:    numOrDash(row.newDealPl),
+      modifyPl:     numOrDash(row.modifyPl),
+      cancelPl:     numOrDash(row.cancelPl),
+      othersPl:     numOrDash(row.othersPl),
+      mvPl:         numOrDash(row.mvPl),
+      mvConvPl:     numOrDash(row.mvConvPl),
+      cashPl:       numOrDash(row.cashPl),
+      cashConvPl:   numOrDash(row.cashConvPl),
+      totalPl:      numOrDash(row.totalPl),
+      totalConvPl:  numOrDash(row.totalConvPl),
+    })
+
+    if (row.children && row.children.length) {
+      result.push(...flattenRows(row.children, depth + 1))
+    }
+  }
+  return result
+}
+
 function exportTable() {
-  ElMessage.info(t('pnlAttribution.exportComingSoon'))
+  const rptCcy = currency.value || 'USD'
+
+  // ── 表头第一行：列分组（合并单元格） ──────────────────────────────────────
+  // 列索引（0-based）：
+  //  0  归因维度
+  //  1  初始化 / Model Assign.
+  //  2  时间衰减 / Time Decay
+  //  3-6  市场数据 / FX Spot, Yield Curves, Basis Curves, FX Vol/Smiles
+  //  7  定盘价 / Fixings
+  //  8  折算 / Spot PL Conv.
+  //  9-12 交易活动 / New Deal, Modify Deal, Cancel Deal, Others
+  //  13-20 PL 结果（P&L Currency, MV PL, MV Conv PL, Cash PL, Cash Conv PL, Total PL, Total Conv PL）
+  const groupRow = [
+    t('pnlAttribution.dimHeader'),   // 0
+    t('pnlAttribution.groupInit'),   // 1  → span 1
+    t('pnlAttribution.groupTime'),   // 2  → span 1
+    t('pnlAttribution.groupMarket'), // 3  → span 4
+    '', '', '',                      // 4-6
+    t('pnlAttribution.groupFixing'), // 7  → span 1
+    t('pnlAttribution.groupConv'),   // 8  → span 1
+    t('pnlAttribution.groupTrade'),  // 9  → span 4
+    '', '', '',                      // 10-12
+    t('pnlAttribution.groupResult'), // 13 → span 7
+    '', '', '', '', '', '',          // 14-19
+  ]
+
+  // ── 表头第二行：字段名 ────────────────────────────────────────────────────
+  const fieldRow = [
+    t('pnlAttribution.dimHeader'),
+    'Model Assign.',
+    'Time Decay',
+    'FX Spot',
+    'Yield Curves',
+    'Basis Curves',
+    'FX Vol/Smiles',
+    'Fixings',
+    'Spot PL Conv.',
+    t('pnlAttribution.newDeal'),
+    t('pnlAttribution.modifyDeal'),
+    t('pnlAttribution.cancelDeal'),
+    'Others',
+    t('pnlAttribution.plCurrencyCol'),
+    t('pnlAttribution.mvPlCol'),
+    `${t('pnlAttribution.mvConvPlCol')} (${rptCcy})`,
+    t('pnlAttribution.cashPlCol'),
+    `${t('pnlAttribution.cashConvPlCol')} (${rptCcy})`,
+    t('pnlAttribution.totalPlCol'),
+    `${t('pnlAttribution.totalConvPlCol')} (${rptCcy})`,
+  ]
+
+  // ── 展平数据行 ────────────────────────────────────────────────────────────
+  const flat = flattenRows(tableRows.value)
+
+  // ── 合计行 ────────────────────────────────────────────────────────────────
+  const sumRow = flat.reduce((acc, r) => {
+    ;[
+      'modelPl','timePl','spotPl','yieldCurvePl','basisCurvePl','volPl',
+      'fixingPl','conversionPl','newDealPl','modifyPl','cancelPl','othersPl',
+      'mvPl','mvConvPl','cashPl','cashConvPl','totalPl','totalConvPl',
+    ].forEach(f => { if (typeof r[f] === 'number') acc[f] = (acc[f] || 0) + r[f] })
+    return acc
+  }, { _label: t('pnlAttribution.grandTotalRow'), _plCurrency: '' })
+
+  // ── 组装 worksheet 数据（aoa = array of arrays）───────────────────────────
+  const FIELDS = [
+    '_label','modelPl','timePl','spotPl','yieldCurvePl','basisCurvePl','volPl',
+    'fixingPl','conversionPl','newDealPl','modifyPl','cancelPl','othersPl',
+    '_plCurrency','mvPl','mvConvPl','cashPl','cashConvPl','totalPl','totalConvPl',
+  ]
+
+  const aoa = [
+    groupRow,
+    fieldRow,
+    ...flat.map(r => FIELDS.map(f => r[f] ?? '')),
+    FIELDS.map(f => sumRow[f] ?? ''),
+  ]
+
+  // ── 创建 workbook / worksheet ────────────────────────────────────────────
+  const ws = XLSX.utils.aoa_to_sheet(aoa)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, t('pnlAttribution.reportTitle').slice(0, 31))
+
+  // ── 合并单元格（列分组表头）────────────────────────────────────────────────
+  ws['!merges'] = [
+    // 归因维度：两行合并
+    { s: { r: 0, c: 0  }, e: { r: 1, c: 0  } },
+    // 初始化（1列）
+    { s: { r: 0, c: 1  }, e: { r: 0, c: 1  } },
+    // 时间衰减（1列）
+    { s: { r: 0, c: 2  }, e: { r: 0, c: 2  } },
+    // 市场数据（4列）
+    { s: { r: 0, c: 3  }, e: { r: 0, c: 6  } },
+    // 定盘价（1列）
+    { s: { r: 0, c: 7  }, e: { r: 0, c: 7  } },
+    // 折算（1列）
+    { s: { r: 0, c: 8  }, e: { r: 0, c: 8  } },
+    // 交易活动（4列）
+    { s: { r: 0, c: 9  }, e: { r: 0, c: 12 } },
+    // PL 结果（7列）
+    { s: { r: 0, c: 13 }, e: { r: 0, c: 19 } },
+  ]
+
+  // ── 列宽 ──────────────────────────────────────────────────────────────────
+  ws['!cols'] = [
+    { wch: 36 }, // 归因维度
+    { wch: 14 }, // Model Assign.
+    { wch: 12 }, // Time Decay
+    { wch: 12 }, // FX Spot
+    { wch: 14 }, // Yield Curves
+    { wch: 14 }, // Basis Curves
+    { wch: 14 }, // FX Vol/Smiles
+    { wch: 12 }, // Fixings
+    { wch: 14 }, // Spot PL Conv.
+    { wch: 12 }, // New Deal
+    { wch: 12 }, // Modify Deal
+    { wch: 12 }, // Cancel Deal
+    { wch: 10 }, // Others
+    { wch: 10 }, // P&L Currency
+    { wch: 12 }, // MV PL
+    { wch: 16 }, // MV Conv PL
+    { wch: 12 }, // Cash PL
+    { wch: 16 }, // Cash Conv PL
+    { wch: 12 }, // Total PL
+    { wch: 16 }, // Total Conv PL
+  ]
+
+  // ── 触发下载 ──────────────────────────────────────────────────────────────
+  const filename = `归因分析报告_${scenarioName.value}_${new Date().toISOString().slice(0,10)}.xlsx`
+  XLSX.writeFile(wb, filename)
+
+  ElMessage.success(t('pnlAttribution.exportSuccess'))
 }
 
 // ── 表格单元格工具 ────────────────────────────────────────────────────────────

@@ -610,6 +610,7 @@
     "showPctBtn": "% Contribution",
     "exportBtn": "Export",
     "exportComingSoon": "Export feature coming soon",
+    "exportSuccess": "Exported successfully",
     "distributionLabel": "Distribution",
     "dimHeader": "Attribution Dimension",
     "groupInit": "Initialization",
