@@ -1,0 +1,54 @@
+// GIT-RG 全局样式 - 还原 RCS 5.0 视觉风格
+
+// CSS variables
+:root {
+  --git-bg: #f5f7fb;
+  --git-surface: #ffffff;
+  --git-border: #e5e7ee;
+  --git-text-1: #1f2329;
+  --git-text-2: #4e5969;
+  --git-text-3: #86909c;
+  --git-primary: #3b6df2;
+  --git-primary-hover: #2f5fdb;
+  --git-warning: #ff7d00;
+  --git-success: #00b42a;
+  --git-danger: #f53f3f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c9cdd4;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+// Element Plus 微调，贴近原系统
+.el-menu {
+  border-right: none !important;
+}
+
+.el-table th.el-table__cell {
+  background: #fafbfc !important;
+  color: var(--git-text-2) !important;
+  font-weight: 600 !important;
+}
+
+.el-table .cell {
+  font-variant-numeric: tabular-nums;
+}
+
+.git-tag-buy   { color: #00b42a; font-weight: 600; }
+.git-tag-sell  { color: #f53f3f; font-weight: 600; }
+.git-tag-pay   { color: #f53f3f; font-weight: 600; }
+.git-tag-recv  { color: #00b42a; font-weight: 600; }
+.git-tag-borrow { color: #f53f3f; font-weight: 600; }
+.git-tag-lend   { color: #00b42a; font-weight: 600; }

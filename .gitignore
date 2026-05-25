@@ -1,0 +1,35 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+
+# ── 测试 & 验证临时文件 ────────────────────────────────────────────────────────
+frontend/test-*.js
+frontend/verify-*.js
+frontend/verify-*.html
+frontend/TASK-*.md
+
+# ── 编辑器 & 系统 ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+.kiro/
+
+# ── 环境变量 ───────────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local

@@ -1,0 +1,5 @@
+# 不固定版本：兼容 Python 3.10 ~ 3.14
+# fastapi 会自动拉取与当前 Python 兼容的 pydantic / starlette
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.10
