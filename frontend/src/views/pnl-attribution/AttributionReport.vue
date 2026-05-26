@@ -247,28 +247,6 @@
               </span>
             </template>
           </el-table-column>
-          <el-table-column prop="cashPl" :label="t('pnlAttribution.cashPlCol')" min-width="108" align="right" fixed="right">
-            <template #default="{ row }">
-              <span :class="cellClass(row,'cashPl')">{{ cellVal(row,'cashPl') }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="cashConvPl" :label="`${t('pnlAttribution.cashConvPlCol')} (${currency})`" min-width="124" align="right" fixed="right">
-            <template #default="{ row }">
-              <span :class="[cellClass(row,'cashConvPl'), { 'cell-val-result': row._rowType === 'entity' || row._rowType === 'acctype' }]">
-                {{ cellVal(row,'cashConvPl') }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="totalPl" :label="t('pnlAttribution.totalPlCol')" min-width="108" align="right" fixed="right" class-name="col-group-total">
-            <template #default="{ row }">
-              <span :class="[cellClass(row,'totalPl'), 'cell-val-bold']">{{ cellVal(row,'totalPl') }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="totalConvPl" :label="`${t('pnlAttribution.totalConvPlCol')} (${currency})`" min-width="136" align="right" fixed="right" class-name="col-group-total">
-            <template #default="{ row }">
-              <span :class="[cellClass(row,'totalConvPl'), 'cell-val-result']">{{ cellVal(row,'totalConvPl') }}</span>
-            </template>
-          </el-table-column>
         </el-table-column>
       </el-table>
     </div>
@@ -723,10 +701,8 @@ const tableRows = computed(() => {
                   : null
                 flat.push({
                   ...d,
-                  mvPl:        curvePl,
-                  mvConvPl:    curveConv,
-                  totalPl:     curvePl,
-                  totalConvPl: curveConv,
+                  mvPl:     curvePl,
+                  mvConvPl: curveConv,
                 })
               })
           })
@@ -749,13 +725,13 @@ const tableRows = computed(() => {
 
 // ── 表格合计行 ────────────────────────────────────────────────────────────────
 const grandTotal = computed(() =>
-  tableRows.value.reduce((s, r) => s + (r.totalConvPl || 0), 0)
+  tableRows.value.reduce((s, r) => s + (r.mvConvPl || 0), 0)
 )
 
 const PL_FIELDS = [
   'modelPl','timePl','spotPl','yieldCurvePl','basisCurvePl',
   'volPl','fixingPl','conversionPl','newDealPl','modifyPl','cancelPl','othersPl',
-  'cashPl','cashConvPl','mvPl','mvConvPl','totalPl','totalConvPl',
+  'mvPl','mvConvPl',
 ]
 
 function getSummary({ columns }) {
@@ -802,10 +778,6 @@ function flattenRows(rows, depth = 0) {
       othersPl:     numOrDash(row.othersPl),
       mvPl:         numOrDash(row.mvPl),
       mvConvPl:     numOrDash(row.mvConvPl),
-      cashPl:       numOrDash(row.cashPl),
-      cashConvPl:   numOrDash(row.cashConvPl),
-      totalPl:      numOrDash(row.totalPl),
-      totalConvPl:  numOrDash(row.totalConvPl),
     })
 
     if (row.children && row.children.length) {
@@ -827,7 +799,7 @@ function exportTable() {
   //  7  定盘价 / Fixings
   //  8  折算 / Spot PL Conv.
   //  9-12 交易活动 / New Deal, Modify Deal, Cancel Deal, Others
-  //  13-20 PL 结果（P&L Currency, MV PL, MV Conv PL, Cash PL, Cash Conv PL, Total PL, Total Conv PL）
+  //  13-15 PL 结果（P&L Currency, MV PL, MV Conv PL）
   const groupRow = [
     t('pnlAttribution.dimHeader'),   // 0
     t('pnlAttribution.groupInit'),   // 1  → span 1
@@ -838,8 +810,8 @@ function exportTable() {
     t('pnlAttribution.groupConv'),   // 8  → span 1
     t('pnlAttribution.groupTrade'),  // 9  → span 4
     '', '', '',                      // 10-12
-    t('pnlAttribution.groupResult'), // 13 → span 7
-    '', '', '', '', '', '',          // 14-19
+    t('pnlAttribution.groupResult'), // 13 → span 3
+    '', '',                          // 14-15
   ]
 
   // ── 表头第二行：字段名 ────────────────────────────────────────────────────
@@ -860,10 +832,6 @@ function exportTable() {
     t('pnlAttribution.plCurrencyCol'),
     t('pnlAttribution.mvPlCol'),
     `${t('pnlAttribution.mvConvPlCol')} (${rptCcy})`,
-    t('pnlAttribution.cashPlCol'),
-    `${t('pnlAttribution.cashConvPlCol')} (${rptCcy})`,
-    t('pnlAttribution.totalPlCol'),
-    `${t('pnlAttribution.totalConvPlCol')} (${rptCcy})`,
   ]
 
   // ── 展平数据行 ────────────────────────────────────────────────────────────
@@ -874,7 +842,7 @@ function exportTable() {
     ;[
       'modelPl','timePl','spotPl','yieldCurvePl','basisCurvePl','volPl',
       'fixingPl','conversionPl','newDealPl','modifyPl','cancelPl','othersPl',
-      'mvPl','mvConvPl','cashPl','cashConvPl','totalPl','totalConvPl',
+      'mvPl','mvConvPl',
     ].forEach(f => { if (typeof r[f] === 'number') acc[f] = (acc[f] || 0) + r[f] })
     return acc
   }, { _label: t('pnlAttribution.grandTotalRow'), _plCurrency: '' })
@@ -883,7 +851,7 @@ function exportTable() {
   const FIELDS = [
     '_label','modelPl','timePl','spotPl','yieldCurvePl','basisCurvePl','volPl',
     'fixingPl','conversionPl','newDealPl','modifyPl','cancelPl','othersPl',
-    '_plCurrency','mvPl','mvConvPl','cashPl','cashConvPl','totalPl','totalConvPl',
+    '_plCurrency','mvPl','mvConvPl',
   ]
 
   const aoa = [
@@ -914,8 +882,8 @@ function exportTable() {
     { s: { r: 0, c: 8  }, e: { r: 0, c: 8  } },
     // 交易活动（4列）
     { s: { r: 0, c: 9  }, e: { r: 0, c: 12 } },
-    // PL 结果（7列）
-    { s: { r: 0, c: 13 }, e: { r: 0, c: 19 } },
+    // PL 结果（3列）
+    { s: { r: 0, c: 13 }, e: { r: 0, c: 15 } },
   ]
 
   // ── 列宽 ──────────────────────────────────────────────────────────────────
@@ -936,10 +904,6 @@ function exportTable() {
     { wch: 10 }, // P&L Currency
     { wch: 12 }, // MV PL
     { wch: 16 }, // MV Conv PL
-    { wch: 12 }, // Cash PL
-    { wch: 16 }, // Cash Conv PL
-    { wch: 12 }, // Total PL
-    { wch: 16 }, // Total Conv PL
   ]
 
   // ── 触发下载 ──────────────────────────────────────────────────────────────
@@ -972,7 +936,7 @@ function cellClass(row, field) {
 // 上层汇总行（entity/acctype）的 mvPl 为各头寸数值加总，可能混货币，仅作方向参考
 function cellPct(row, field) {
   const v = row[field]
-  const base = Math.abs(row.mvPl ?? row.totalConvPl ?? 0)
+  const base = Math.abs(row.mvPl ?? 0)
   if (v == null || base === 0) return null
   return parseFloat(((v / base) * 100).toFixed(1))
 }
