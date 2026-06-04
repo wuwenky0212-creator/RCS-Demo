@@ -846,7 +846,7 @@
     "amount": "Amount",
     "spotRateLabel": "Spot Rate / Spread / Cost Rate",
     "fwdRateLabel": "Fwd Rate / Spread / Cost Fwd Rate",
-    "profitSplit": "Profit Sharing",
+    "profitSplit": "Margin",
     "tradeDate": "Trade Date",
     "spotValueDate": "Spot Value Date",
     "optionalDate": "Optional Delivery Date",

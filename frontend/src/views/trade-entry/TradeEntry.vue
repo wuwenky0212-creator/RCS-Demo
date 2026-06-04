@@ -332,49 +332,37 @@
                   </div>
                 </div>
 
-                <!-- ── 收 / 付（两行，货币可切换）── -->
+                <!-- ── 收 / 付（BUY/SELL 固定，货币 chip 点击切换）── -->
                 <div class="af-cell af-cell--label af-cell--dir-label">
                   {{ t('te.recvPay') }} <span class="req">*</span>
                 </div>
                 <div v-for="trade in avgFwdTrades" :key="'dir'+trade.id" class="af-cell af-cell--dir-block">
-                  <!-- 收 行：direction=BUY 时收 CCY1，direction=SELL 时收 CCY2 -->
-                  <div class="af-dir-row af-dir-row--recv">
-                    <button class="af-dir-tag is-on"
-                      :class="trade.direction === 'BUY' ? 'af-dir-tag--buy' : 'af-dir-tag--sell'">
-                      {{ trade.direction === 'BUY' ? 'BUY' : 'SELL' }}
-                    </button>
+                  <!-- BUY 行（固定） -->
+                  <div class="af-dir-row">
+                    <button class="af-dir-tag af-dir-tag--buy">BUY</button>
                     <span class="af-ccy-chip"
-                      :class="trade.direction === 'BUY' ? 'af-ccy-chip--recv' : 'af-ccy-chip--pay'"
-                      title="点击切换方向"
+                      title="点击切换货币"
                       @click="trade.direction = trade.direction === 'BUY' ? 'SELL' : 'BUY'">
                       {{ trade.direction === 'BUY' ? afCcy1 : afCcy2 }}
                       <el-icon class="af-swap-hint"><Sort /></el-icon>
                     </span>
                     <el-input
                       :model-value="trade.direction === 'BUY' ? trade.buyAmount : trade.sellAmount"
-                      @update:model-value="v => trade.direction === 'BUY' ? (trade.buyAmount = v) : (trade.sellAmount = v)"
+                      @update:model-value="v => { trade.direction === 'BUY' ? (trade.buyAmount = v) : (trade.sellAmount = v); calcAfTradeCosts(trade) }"
                       placeholder="0.00" size="small" class="af-flex-input" />
                   </div>
-                  <!-- 中间 swap 按钮 -->
-                  <div class="af-dir-swap" @click="trade.direction = trade.direction === 'BUY' ? 'SELL' : 'BUY'">
-                    <el-icon><Sort /></el-icon>
-                  </div>
-                  <!-- 付 行：direction=BUY 时付 CCY2，direction=SELL 时付 CCY1 -->
-                  <div class="af-dir-row af-dir-row--pay">
-                    <button class="af-dir-tag"
-                      :class="trade.direction === 'BUY' ? 'af-dir-tag--sell' : 'af-dir-tag--buy'">
-                      {{ trade.direction === 'BUY' ? 'SELL' : 'BUY' }}
-                    </button>
+                  <!-- SELL 行（固定） -->
+                  <div class="af-dir-row">
+                    <button class="af-dir-tag af-dir-tag--sell">SELL</button>
                     <span class="af-ccy-chip"
-                      :class="trade.direction === 'BUY' ? 'af-ccy-chip--pay' : 'af-ccy-chip--recv'"
-                      title="点击切换方向"
+                      title="点击切换货币"
                       @click="trade.direction = trade.direction === 'BUY' ? 'SELL' : 'BUY'">
                       {{ trade.direction === 'BUY' ? afCcy2 : afCcy1 }}
                       <el-icon class="af-swap-hint"><Sort /></el-icon>
                     </span>
                     <el-input
                       :model-value="trade.direction === 'BUY' ? trade.sellAmount : trade.buyAmount"
-                      @update:model-value="v => trade.direction === 'BUY' ? (trade.sellAmount = v) : (trade.buyAmount = v)"
+                      @update:model-value="v => { trade.direction === 'BUY' ? (trade.sellAmount = v) : (trade.buyAmount = v); calcAfTradeCosts(trade) }"
                       placeholder="0.00" size="small" class="af-flex-input" />
                   </div>
                 </div>
@@ -385,22 +373,10 @@
                   <el-input v-model="trade.spotRate" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" @input="calcAfTradeCosts(trade)" />
                 </div>
 
-                <!-- ── 成本即期汇率 ── -->
-                <div class="af-cell af-cell--label af-cell--sub">{{ t('te.costSpotRate') }}</div>
-                <div v-for="trade in avgFwdTrades" :key="'csr'+trade.id" class="af-cell af-cell--ro">
-                  <el-input :model-value="trade.costSpotRate || t('te.autoFill')" :placeholder="t('te.autoFill')" size="small" style="width:100%" disabled />
-                </div>
-
                 <!-- ── 升贴水 ── -->
                 <div class="af-cell af-cell--label">{{ t('te.premium') }}</div>
                 <div v-for="trade in avgFwdTrades" :key="'pm'+trade.id" class="af-cell">
                   <el-input v-model="trade.premium" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" @input="calcAfTradeCosts(trade)" />
-                </div>
-
-                <!-- ── 成本升贴水 ── -->
-                <div class="af-cell af-cell--label af-cell--sub">{{ t('te.costPremium') }}</div>
-                <div v-for="trade in avgFwdTrades" :key="'cpm'+trade.id" class="af-cell af-cell--ro">
-                  <el-input :model-value="trade.costPremium || t('te.autoFill')" :placeholder="t('te.autoFill')" size="small" style="width:100%" disabled />
                 </div>
 
                 <!-- ── 远期汇率 ── -->
@@ -418,19 +394,16 @@
 
                 <!-- ── 成本远期汇率 ── -->
                 <div class="af-cell af-cell--label af-cell--sub">{{ t('te.costFwdRate') }}</div>
-                <div v-for="trade in avgFwdTrades" :key="'cfr'+trade.id" class="af-cell af-cell--ro">
-                  <el-input :model-value="trade.costFwdRate || t('te.autoFill')" :placeholder="t('te.autoFill')" size="small" style="width:100%" disabled />
+                <div v-for="trade in avgFwdTrades" :key="'cfr'+trade.id" class="af-cell">
+                  <el-input v-model="trade.costFwdRate" :placeholder="t('te.autoFill')" size="small" style="width:100%" />
                 </div>
 
                 <!-- ── 分润金额 ── -->
                 <div class="af-cell af-cell--label af-cell--sub">{{ t('te.profitSplit') }}</div>
                 <div v-for="trade in avgFwdTrades" :key="'ps'+trade.id" class="af-cell af-cell--2col">
-                  <el-input v-model="trade.profitSplit" placeholder="0.00" size="small" class="af-flex-input"
+                  <el-input v-model="trade.profitSplit" :placeholder="t('te.inputPlaceholder')" size="small" class="af-flex-input"
                     :disabled="!afCommon.mirrorAccount" />
-                  <el-select v-model="trade.profitCcy" size="small" style="width:68px;flex-shrink:0"
-                    :disabled="!afCommon.mirrorAccount">
-                    <el-option v-for="c in CCY_LIST" :key="c" :label="c" :value="c" />
-                  </el-select>
+                  <span class="af-profit-ccy">{{ afCcy2 }}</span>
                 </div>
 
                 <!-- ── 即期起息日 ── -->
@@ -476,7 +449,7 @@
                   <div class="af-cm-section">
                     <div class="af-cm-section-title">{{ t('te.secTradeInfo') }}</div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.currencyPair') }} <span class="req">*</span></div>
+                      <div class="af-cm-fl" :title="t('te.currencyPair')">{{ t('te.currencyPair') }} <span class="req">*</span></div>
                       <div class="af-cm-fv">
                         <el-select v-model="afCommon.currencyPair" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%">
                           <el-option label="USD/CNY" value="USD/CNY" />
@@ -488,25 +461,25 @@
                       </div>
                     </div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.parSpotRate') }}</div>
+                      <div class="af-cm-fl" :title="t('te.parSpotRate')">{{ t('te.parSpotRate') }}</div>
                       <div class="af-cm-fv">
                         <el-input v-model="afCommon.avgSpotRateInput" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" />
                       </div>
                     </div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.parPremium') }}</div>
+                      <div class="af-cm-fl" :title="t('te.parPremium')">{{ t('te.parPremium') }}</div>
                       <div class="af-cm-fv">
                         <el-input v-model="afCommon.avgPremiumInput" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" />
                       </div>
                     </div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.parFwdRate') }}</div>
+                      <div class="af-cm-fl" :title="t('te.parFwdRate')">{{ t('te.parFwdRate') }}</div>
                       <div class="af-cm-fv">
                         <el-input v-model="afCommon.avgFwdRateInput" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" />
                       </div>
                     </div>
                     <div class="af-cm-field af-cm-field--last">
-                      <div class="af-cm-fl">{{ t('te.tradeDate') }} <span class="req">*</span></div>
+                      <div class="af-cm-fl" :title="t('te.tradeDate')">{{ t('te.tradeDate') }} <span class="req">*</span></div>
                       <div class="af-cm-fv" style="gap:6px">
                         <el-date-picker v-model="afCommon.tradeDate" type="date" :placeholder="t('te.selectDate')"
                           value-format="YYYY-MM-DD" size="small" style="flex:1;min-width:0" />
@@ -520,28 +493,28 @@
                   <div class="af-cm-section">
                     <div class="af-cm-section-title">{{ t('te.secTradeAccount') }}</div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.account') }} <span class="req">*</span></div>
+                      <div class="af-cm-fl" :title="t('te.account')">{{ t('te.account') }} <span class="req">*</span></div>
                       <div class="af-cm-fv">
                         <el-select v-model="afCommon.account" :placeholder="t('te.selectPlaceholder')" size="small" class="af-flex-input" />
                         <el-input :placeholder="t('te.autoFill')" size="small" class="af-flex-input" disabled />
                       </div>
                     </div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.counterparty') }} <span class="req">*</span></div>
+                      <div class="af-cm-fl" :title="t('te.counterparty')">{{ t('te.counterparty') }} <span class="req">*</span></div>
                       <div class="af-cm-fv">
                         <el-select v-model="afCommon.counterparty" :placeholder="t('te.selectPlaceholder')" size="small" class="af-flex-input" />
                         <el-input :placeholder="t('te.autoFill')" size="small" class="af-flex-input" disabled />
                       </div>
                     </div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.broker') }}</div>
+                      <div class="af-cm-fl" :title="t('te.broker')">{{ t('te.broker') }}</div>
                       <div class="af-cm-fv">
                         <el-select v-model="afCommon.broker" :placeholder="t('te.selectPlaceholder')" size="small" class="af-flex-input" />
                         <el-input :placeholder="t('te.autoFill')" size="small" class="af-flex-input" disabled />
                       </div>
                     </div>
                     <div class="af-cm-field af-cm-field--last">
-                      <div class="af-cm-fl">{{ t('te.mirrorAccount') }}</div>
+                      <div class="af-cm-fl" :title="t('te.mirrorAccount')">{{ t('te.mirrorAccount') }}</div>
                       <div class="af-cm-fv">
                         <el-select v-model="afCommon.mirrorAccount" :placeholder="t('te.selectPlaceholder')" size="small" class="af-flex-input" />
                         <el-input :placeholder="t('te.autoFill')" size="small" class="af-flex-input" disabled />
@@ -553,7 +526,7 @@
                   <div class="af-cm-section">
                     <div class="af-cm-section-title">{{ t('te.secRemarks') }}</div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.tradeNature') }} <span class="req">*</span></div>
+                      <div class="af-cm-fl" :title="t('te.tradeNature')">{{ t('te.tradeNature') }} <span class="req">*</span></div>
                       <div class="af-cm-fv">
                         <el-select v-model="afCommon.tradeNature" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%">
                           <el-option :label="t('te.natureInternal')" value="内部交易" />
@@ -563,19 +536,19 @@
                       </div>
                     </div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.externalNo') }}</div>
+                      <div class="af-cm-fl" :title="t('te.externalNo')">{{ t('te.externalNo') }}</div>
                       <div class="af-cm-fv">
                         <el-input v-model="afCommon.externalNo" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" />
                       </div>
                     </div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.tradePurpose') }}</div>
+                      <div class="af-cm-fl" :title="t('te.tradePurpose')">{{ t('te.tradePurpose') }}</div>
                       <div class="af-cm-fv">
                         <el-input v-model="afCommon.purpose" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" />
                       </div>
                     </div>
                     <div class="af-cm-field af-cm-field--last">
-                      <div class="af-cm-fl">{{ t('te.remarks') }}</div>
+                      <div class="af-cm-fl" :title="t('te.remarks')">{{ t('te.remarks') }}</div>
                       <div class="af-cm-fv">
                         <el-input v-model="afCommon.remark" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" />
                       </div>
@@ -586,19 +559,19 @@
                   <div class="af-cm-section af-cm-section--ext">
                     <div class="af-cm-section-title">{{ t('te.secExtFields') }}</div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.ourSettlePath') }}</div>
+                      <div class="af-cm-fl" :title="t('te.ourSettlePath')">{{ t('te.ourSettlePath') }}</div>
                       <div class="af-cm-fv"><el-select v-model="afCommon.ourSettlePath" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%" /></div>
                     </div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.theirSettlePath') }}</div>
+                      <div class="af-cm-fl" :title="t('te.theirSettlePath')">{{ t('te.theirSettlePath') }}</div>
                       <div class="af-cm-fv"><el-select v-model="afCommon.theirSettlePath" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%" /></div>
                     </div>
                     <div class="af-cm-field">
-                      <div class="af-cm-fl">{{ t('te.clearingMethod') }}</div>
+                      <div class="af-cm-fl" :title="t('te.clearingMethod')">{{ t('te.clearingMethod') }}</div>
                       <div class="af-cm-fv"><el-select v-model="afCommon.clearingMethod" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%" /></div>
                     </div>
                     <div class="af-cm-field af-cm-field--last">
-                      <div class="af-cm-fl">{{ t('te.tradeMethod') }}</div>
+                      <div class="af-cm-fl" :title="t('te.tradeMethod')">{{ t('te.tradeMethod') }}</div>
                       <div class="af-cm-fv"><el-select v-model="afCommon.tradeMethod" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%" /></div>
                     </div>
                   </div>
@@ -1690,6 +1663,18 @@ function calcAfTradeCosts(t) {
   t.costSpotRate = calc(t.spotRate, t.spotBP)
   t.costPremium  = calc(t.premium,  t.premiumBP)
   t.costFwdRate  = calc(t.fwdRate,  t.fwdBP)
+
+  // Margin = (对客远期汇率 − 成本远期汇率) × CCY1 名义本金
+  // 客户买 CCY1 时银行报高价盈利；客户卖 CCY1 时银行报低价盈利
+  const fwd     = parseFloat(t.fwdRate)
+  const cost    = parseFloat(t.costFwdRate)
+  const notional = parseFloat(t.direction === 'BUY' ? t.buyAmount : t.sellAmount)
+  if (!isNaN(fwd) && !isNaN(cost) && !isNaN(notional) && notional > 0) {
+    const spreadPerUnit = t.direction === 'BUY' ? (fwd - cost) : (cost - fwd)
+    t.profitSplit = (spreadPerUnit * notional).toFixed(2)
+  } else {
+    t.profitSplit = ''
+  }
 }
 
 // 货币对变更时自动同步所有笔的分润货币
@@ -2750,7 +2735,7 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
   }
 }
 
-/* 货币 chip（可点击切换） */
+/* 货币 chip（可点击切换货币对） */
 .af-ccy-chip {
   flex-shrink: 0;
   display: inline-flex;
@@ -2760,20 +2745,18 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
   font-weight: 600;
   padding: 1px 5px;
   border-radius: 3px;
+  border: 1px solid #d0d5e0;
   white-space: nowrap;
   min-width: 36px;
   cursor: pointer;
   user-select: none;
+  color: var(--git-text-2);
+  background: #f4f6fa;
   transition: all 0.15s;
 
-  /* 收行 chip：颜色随 direction 动态变 — 由 JS class 控制，此处定义通用 hover */
-  &--recv {
-    color: #1a8a6b; background: #e0f7f0; border: 1px solid #b3e8d8;
-    &:hover { background: #c5f0e4; border-color: #7dd8bc; }
-  }
-  &--pay {
-    color: #c0392b; background: #fff0f0; border: 1px solid #ffc9c9;
-    &:hover { background: #ffe0e0; border-color: #f0a0a0; }
+  &:hover {
+    background: #e8ecf5;
+    border-color: #b0b8cc;
   }
 }
 
@@ -2826,6 +2809,20 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
 
 /* 双列格 (legacy，保留兼容) */
 .af-cell--2col  { gap: 4px; }
+
+.af-profit-ccy {
+  flex-shrink: 0;
+  width: 48px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--git-text-2);
+  background: #f4f6fa;
+  border: 1px solid #d0d5e0;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .af-flex-input  { flex: 1; min-width: 0; }
 
 /* 公共要素折叠区：flex-shrink:0 确保不被挤压，始终固定在底部 */
@@ -2986,9 +2983,12 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
   flex-shrink: 0;
   border-right: 1px solid #edf0f7;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   user-select: none;
-  display: flex;
-  align-items: center;
+  display: block;
+  line-height: 22px;
+  cursor: default;
   .req { color: #f56c6c; margin-left: 2px; }
 }
 
