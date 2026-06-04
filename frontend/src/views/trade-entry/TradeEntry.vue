@@ -385,13 +385,6 @@
                   <el-input v-model="trade.spotRate" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" @input="calcAfTradeCosts(trade)" />
                 </div>
 
-                <!-- ── 即期点差(BP) ── -->
-                <div class="af-cell af-cell--label af-cell--sub">{{ t('te.spreadBP') }}</div>
-                <div v-for="trade in avgFwdTrades" :key="'sbp'+trade.id" class="af-cell">
-                  <el-input v-model="trade.spotBP" placeholder="0.00000000" size="small" style="width:100%"
-                    :disabled="!afCommon.mirrorAccount" @input="calcAfTradeCosts(trade)" />
-                </div>
-
                 <!-- ── 成本即期汇率 ── -->
                 <div class="af-cell af-cell--label af-cell--sub">{{ t('te.costSpotRate') }}</div>
                 <div v-for="trade in avgFwdTrades" :key="'csr'+trade.id" class="af-cell af-cell--ro">
@@ -402,13 +395,6 @@
                 <div class="af-cell af-cell--label">{{ t('te.premium') }}</div>
                 <div v-for="trade in avgFwdTrades" :key="'pm'+trade.id" class="af-cell">
                   <el-input v-model="trade.premium" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" @input="calcAfTradeCosts(trade)" />
-                </div>
-
-                <!-- ── 升贴水点差(BP) ── -->
-                <div class="af-cell af-cell--label af-cell--sub">{{ t('te.spreadBP') }}</div>
-                <div v-for="trade in avgFwdTrades" :key="'pbp'+trade.id" class="af-cell">
-                  <el-input v-model="trade.premiumBP" placeholder="0.00000000" size="small" style="width:100%"
-                    :disabled="!afCommon.mirrorAccount" @input="calcAfTradeCosts(trade)" />
                 </div>
 
                 <!-- ── 成本升贴水 ── -->
