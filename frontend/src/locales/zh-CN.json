@@ -790,7 +790,7 @@
     "actionDetail": "详情",
     "actionTransfer": "转移",
     "drawerTitle": "掉期头寸转移",
-    "tagInternal": "即期内部交易",
+    "tagInternal": "掉期内部交易",
     "sectionTradeInfo": "交易信息",
     "sectionAccount": "账户信息",
     "sectionRemarks": "备注",

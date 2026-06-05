@@ -338,24 +338,6 @@
                   </div>
                 </div>
 
-                <!-- 近端/远端点差 -->
-                <div class="td-row">
-                  <div class="td-label td-label--w" :title="t('fxSwap.fieldNearFarSpread')">{{ t('fxSwap.fieldNearFarSpread') }}</div>
-                  <div class="td-value td-value--split">
-                    <el-input v-model="tf.nearSpread" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
-                    <el-input v-model="tf.farSpread"  size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
-                  </div>
-                </div>
-
-                <!-- 近端/远端分润金额 -->
-                <div class="td-row">
-                  <div class="td-label td-label--w" :title="t('fxSwap.fieldNearFarMargin')">{{ t('fxSwap.fieldNearFarMargin') }}</div>
-                  <div class="td-value td-value--split">
-                    <el-input v-model="tf.nearMargin" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
-                    <el-input v-model="tf.farMargin"  size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
-                  </div>
-                </div>
-
                 <!-- 代客外部流水号 -->
                 <div class="td-row">
                   <div class="td-label td-label--w" :title="t('fxSwap.fieldClientExtNo')">{{ t('fxSwap.fieldClientExtNo') }}</div>
