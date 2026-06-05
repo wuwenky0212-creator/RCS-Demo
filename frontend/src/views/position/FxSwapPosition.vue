@@ -199,7 +199,7 @@
           </el-table-column>
 
           <!-- 操作 -->
-          <el-table-column :label="t('fxSwap.colActions')" width="110" align="center" fixed="right">
+          <el-table-column :label="t('fxSwap.colActions')" width="145" align="center" fixed="right">
             <template #default="{ row }">
               <span class="action-cell">
                 <span class="action-link" @click="handleDetail(row)">{{ t('fxSwap.actionDetail') }}</span>

@@ -524,6 +524,7 @@
       "internal-transfer-error": "Internal Transfer Error Handling",
       "suspense-acct": "Suspense & Write-off",
       "position-spot-fx": "FX Spot Positions",
+      "position-fx-swap": "FX Swap Positions",
       "position-transfer-records": "Position Transfer Records"
     }
   },
