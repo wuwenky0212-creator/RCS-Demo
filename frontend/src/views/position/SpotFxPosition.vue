@@ -95,7 +95,7 @@
       v-model="drawerVisible"
       :title="t('spotPosition.drawerTitle')"
       direction="rtl"
-      size="860px"
+      size="560px"
       :close-on-click-modal="false"
       class="transfer-drawer"
       @close="resetTransferForm"
@@ -305,26 +305,6 @@
               <el-icon><Delete /></el-icon>{{ t('spotPosition.btnClearAll') }}
             </el-button>
             <el-button type="primary" size="small" @click="handleTransferSubmit">{{ t('spotPosition.btnSubmit') }}</el-button>
-          </div>
-        </div>
-
-        <!-- ── 右侧：分析面板 ── -->
-        <div class="td-analysis-panel">
-          <div v-for="item in analysisItems" :key="item.key" class="td-analysis-item"
-            @click="toggleAnalysis(item.key)">
-            <div class="td-ai-hd">
-              <div class="td-ai-left">
-                <el-icon class="td-ai-icon"><component :is="item.icon" /></el-icon>
-                <span class="td-ai-title">{{ item.label }}</span>
-              </div>
-              <div class="td-ai-right">
-                <el-icon class="td-ai-refresh"><RefreshRight /></el-icon>
-                <el-icon class="td-ai-arrow" :class="{ 'is-open': analysisOpen[item.key] }"><ArrowRight /></el-icon>
-              </div>
-            </div>
-            <div v-show="analysisOpen[item.key]" class="td-ai-body">
-              <span class="td-ai-empty">{{ t('spotPosition.noData') }}</span>
-            </div>
           </div>
         </div>
 

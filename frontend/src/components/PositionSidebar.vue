@@ -15,13 +15,15 @@
         </div>
         <div class="group-items">
           <router-link to="/position/spot-fx" custom v-slot="{ navigate }">
-            <div
-              class="menu-item"
-              :class="{ active: isActive('/position/spot-fx') }"
-              @click="navigate"
-            >
+            <div class="menu-item" :class="{ active: isActive('/position/spot-fx') }" @click="navigate">
               <span class="dot">●</span>
               <span class="label">{{ t('positionSidebar.spotFx') }}</span>
+            </div>
+          </router-link>
+          <router-link to="/position/fx-swap" custom v-slot="{ navigate }">
+            <div class="menu-item" :class="{ active: isActive('/position/fx-swap') }" @click="navigate">
+              <span class="dot">●</span>
+              <span class="label">{{ t('positionSidebar.fxSwap') }}</span>
             </div>
           </router-link>
         </div>

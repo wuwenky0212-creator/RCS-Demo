@@ -13,6 +13,7 @@ import ScenarioQuery from '@/views/pnl-attribution/ScenarioQuery.vue'
 import AttributionReport from '@/views/pnl-attribution/AttributionReport.vue'
 import ProductMaintenance from '@/views/pnl-attribution/ProductMaintenance.vue'
 import SpotFxPosition  from '@/views/position/SpotFxPosition.vue'
+import FxSwapPosition  from '@/views/position/FxSwapPosition.vue'
 import TransferRecords from '@/views/position/TransferRecords.vue'
 
 // RCS-Demo 路由：默认进入"后线工作台 - 交易复核"
@@ -27,6 +28,7 @@ const routes = [
       { path: 'trade-entry', name: 'trade-entry', component: TradeEntry, meta: { title: '交易录入' } },
       { path: 'position', redirect: '/position/spot-fx', meta: { title: '头寸管理' } },
       { path: 'position/spot-fx',        name: 'position-spot-fx',       component: SpotFxPosition,  meta: { title: '即期货币对头寸' } },
+      { path: 'position/fx-swap',        name: 'position-fx-swap',        component: FxSwapPosition,  meta: { title: '外汇掉期头寸' } },
       { path: 'position/transfer-records', name: 'position-transfer-records', component: TransferRecords, meta: { title: '转移记录查询' } },
       { path: 'limit', name: 'limit', component: Placeholder, meta: { title: '限额管理' } },
       { path: 'business', name: 'business', component: Placeholder, meta: { title: '业务管理' } },
