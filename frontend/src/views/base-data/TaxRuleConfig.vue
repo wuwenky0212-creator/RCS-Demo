@@ -186,7 +186,7 @@
             <el-form-item :label="t('taxRule.taxBase')" prop="taxBase">
               <el-select v-model="form.taxBase" :placeholder="t('common.pleaseSelect')" style="width:100%">
                 <el-option :label="t('taxRule.taxBaseAccrued')"  value="accrued_interest" />
-                <el-option :label="t('taxRule.taxBaseNotional')" value="notional" />
+                <el-option :label="t('taxRule.taxBaseCapitalGains')" value="capital_gains" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -276,7 +276,7 @@ const CPTY_MAP = computed(() => ({
 }))
 const TAX_BASE_MAP = computed(() => ({
   accrued_interest: t('taxRule.taxBaseAccrued'),
-  notional: t('taxRule.taxBaseNotional'),
+  capital_gains: t('taxRule.taxBaseCapitalGains'),
 }))
 const SETTLE_MAP = computed(() => ({
   net_deduct: t('taxRule.settlementNet'),

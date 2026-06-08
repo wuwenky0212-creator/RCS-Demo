@@ -276,7 +276,7 @@
     "bondCorp": "企业债",
     "bondConvertible": "可转债",
     "taxBaseAccrued": "应计利息",
-    "taxBaseNotional": "名义本金",
+    "taxBaseCapitalGains": "资本利得",
     "settlementNet": "净扣减",
     "settlementStandalone": "独立结算",
     "timingTradeDate": "交易日",

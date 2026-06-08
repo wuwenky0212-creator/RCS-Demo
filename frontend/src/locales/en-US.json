@@ -276,7 +276,7 @@
     "bondCorp": "Corporate Bond",
     "bondConvertible": "Convertible Bond",
     "taxBaseAccrued": "Accrued Interest",
-    "taxBaseNotional": "Notional Principal",
+    "taxBaseCapitalGains": "Capital Gains",
     "settlementNet": "Net Deduct",
     "settlementStandalone": "Standalone",
     "timingTradeDate": "Trade Date",
