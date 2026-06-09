@@ -324,8 +324,18 @@
                 <div class="td-row">
                   <div class="td-label td-label--w" :title="t('fxSwap.fieldNearAmount')">{{ t('fxSwap.fieldNearAmount') }} <span class="req">*</span></div>
                   <div class="td-value td-value--split">
-                    <el-input v-model="tf.nearAmt1" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
-                    <el-input v-model="tf.nearAmt2" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
+                    <div class="amt-cell">
+                      <button class="amt-dir-tag" :class="tf.direction === 'BUY' ? 'amt-buy' : 'amt-sell'" @click="tf.direction = tf.direction === 'BUY' ? 'SELL' : 'BUY'">
+                        {{ tf.direction === 'BUY' ? 'BUY' : 'SELL' }} <span class="swap-icon">⇌</span>
+                      </button>
+                      <el-input v-model="tf.nearAmt1" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
+                    </div>
+                    <div class="amt-cell">
+                      <button class="amt-dir-tag" :class="tf.direction === 'BUY' ? 'amt-sell' : 'amt-buy'">
+                        {{ tf.direction === 'BUY' ? 'SELL' : 'BUY' }}
+                      </button>
+                      <el-input v-model="tf.nearAmt2" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
+                    </div>
                   </div>
                 </div>
 
@@ -333,8 +343,18 @@
                 <div class="td-row">
                   <div class="td-label td-label--w" :title="t('fxSwap.fieldFarAmount')">{{ t('fxSwap.fieldFarAmount') }} <span class="req">*</span></div>
                   <div class="td-value td-value--split">
-                    <el-input v-model="tf.farAmt1" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
-                    <el-input v-model="tf.farAmt2" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
+                    <div class="amt-cell">
+                      <button class="amt-dir-tag" :class="tf.direction === 'BUY' ? 'amt-sell' : 'amt-buy'" @click="tf.direction = tf.direction === 'BUY' ? 'SELL' : 'BUY'">
+                        {{ tf.direction === 'BUY' ? 'SELL' : 'BUY' }} <span class="swap-icon">⇌</span>
+                      </button>
+                      <el-input v-model="tf.farAmt1" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
+                    </div>
+                    <div class="amt-cell">
+                      <button class="amt-dir-tag" :class="tf.direction === 'BUY' ? 'amt-buy' : 'amt-sell'">
+                        {{ tf.direction === 'BUY' ? 'BUY' : 'SELL' }}
+                      </button>
+                      <el-input v-model="tf.farAmt2" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
+                    </div>
                   </div>
                 </div>
 
@@ -474,6 +494,7 @@ const currentRow    = ref(null)
 
 const tf = reactive({
   currencyPair:  '',
+  direction:     'BUY',
   spotRate:      '',
   tenorQuick:    '',
   tradeDate:     new Date().toISOString().slice(0, 10),
@@ -534,7 +555,7 @@ function handleInternalTransfer(row) {
 
 function resetForm() {
   Object.assign(tf, {
-    currencyPair: '', spotRate: '', tenorQuick: '',
+    currencyPair: '', direction: 'BUY', spotRate: '', tenorQuick: '',
     tradeDate: new Date().toISOString().slice(0, 10), tradeTime: '',
     nearDate: '', farDate: '', tenorDays: 0,
     nearSwapPts: '', nearRate: '', farSwapPts: '', farRate: '',
@@ -1001,6 +1022,22 @@ const tableData = ref([
   &:hover { border-color: var(--git-primary); color: var(--git-primary); }
   &.active { background: var(--git-primary); color: #fff; border-color: var(--git-primary); }
 }
+
+/* 近端/远端金额行内联方向标签 */
+.amt-cell {
+  display: flex; align-items: center; flex: 1; gap: 4px;
+}
+.amt-dir-tag {
+  flex-shrink: 0; padding: 0 8px; height: 24px; line-height: 24px;
+  font-size: 11px; font-weight: 700; border-radius: 3px; cursor: default;
+  border: none; white-space: nowrap; display: flex; align-items: center; gap: 3px;
+}
+.amt-buy  { background: #f6ffed; color: #52c41a; }
+.amt-sell { background: #fff1f0; color: #f5222d; }
+.amt-dir-tag.amt-buy[onClick],
+.amt-dir-tag.amt-sell[onClick] { cursor: pointer; }
+button.amt-dir-tag { cursor: pointer; }
+.swap-icon { font-size: 13px; }
 
 /* 自动计算汇率（蓝色只读） */
 .rate-auto {

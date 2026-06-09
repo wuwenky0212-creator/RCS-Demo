@@ -796,6 +796,7 @@
     "sectionAccount": "Account Information",
     "sectionRemarks": "Remarks",
     "fieldCurrencyPair": "Currency Pair",
+    "fieldDirection": "Direction",
     "fieldAmount": "Amount",
     "fieldValueDate": "Value Date",
     "fieldSpotRate": "Spot Rate",

@@ -795,6 +795,7 @@
     "sectionAccount": "账户信息",
     "sectionRemarks": "备注",
     "fieldCurrencyPair": "货币对",
+    "fieldDirection": "交易方向",
     "fieldAmount": "金额",
     "fieldValueDate": "起息日",
     "fieldSpotRate": "即期汇率",
