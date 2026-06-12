@@ -225,7 +225,6 @@
         <div class="td-header">
           <span class="td-title">{{ t('fxSwap.drawerTitle') }}</span>
           <div class="td-header-tags">
-            <el-tag size="small" type="info" effect="plain">{{ t('fxSwap.tagInternal') }}</el-tag>
             <el-tag v-if="currentRow" size="small" effect="plain">{{ currentRow.symbol }}</el-tag>
           </div>
         </div>
@@ -240,15 +239,35 @@
               <div class="td-section-title"><span class="td-bar"></span>{{ t('fxSwap.sectionTradeInfo') }}</div>
               <div class="td-fields td-fields--wide">
 
-                <!-- 货币对 -->
+                <!-- 货币对（只读，由行数据带入） -->
                 <div class="td-row">
                   <div class="td-label td-label--w" :title="t('fxSwap.fieldCurrencyPair')">{{ t('fxSwap.fieldCurrencyPair') }} <span class="req">*</span></div>
                   <div class="td-value">
-                    <el-select v-model="tf.currencyPair" :placeholder="t('fxSwap.inputPlaceholder')" size="small" style="width:100%">
-                      <el-option label="EUR/USD" value="EURUSD" />
-                      <el-option label="USD/CNY" value="USDCNY" />
-                      <el-option label="EUR/CNY" value="EURCNY" />
-                    </el-select>
+                    <el-input :value="tf.currencyPair" size="small" disabled style="width:100%" />
+                  </div>
+                </div>
+
+                <!-- 金额（BUY/SELL 内嵌，含货币对标注） -->
+                <div class="td-row">
+                  <div class="td-label td-label--w" :title="t('fxSwap.fieldAmount')">
+                    {{ t('fxSwap.fieldAmount') }}<span v-if="tf.currencyPair" class="amt-ccy-hint">（{{ tf.currencyPair.slice(0,3) }}/{{ tf.currencyPair.slice(3) }}）</span>
+                    <span class="req">*</span>
+                  </div>
+                  <div class="td-value td-value--split">
+                    <div class="amt-cell">
+                      <button class="amt-dir-tag" :class="tf.direction === 'BUY' ? 'amt-buy' : 'amt-sell'"
+                        @click="tf.direction = tf.direction === 'BUY' ? 'SELL' : 'BUY'">
+                        {{ tf.direction === 'BUY' ? 'BUY' : 'SELL' }} <span class="swap-icon">⇌</span>
+                      </button>
+                      <el-input v-model="tf.amt1" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
+                    </div>
+                    <div class="amt-cell">
+                      <button class="amt-dir-tag" :class="tf.direction === 'BUY' ? 'amt-sell' : 'amt-buy'"
+                        @click="tf.direction = tf.direction === 'BUY' ? 'SELL' : 'BUY'">
+                        {{ tf.direction === 'BUY' ? 'SELL' : 'BUY' }} <span class="swap-icon">⇌</span>
+                      </button>
+                      <el-input v-model="tf.amt2" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
+                    </div>
                   </div>
                 </div>
 
@@ -260,19 +279,7 @@
                   </div>
                 </div>
 
-                <!-- 交易期限 ON/TN/SN -->
-                <div class="td-row">
-                  <div class="td-label td-label--w" :title="t('fxSwap.fieldTenorQuick')">{{ t('fxSwap.fieldTenorQuick') }}</div>
-                  <div class="td-value">
-                    <div class="tenor-btns">
-                      <button v-for="opt in ['ON','TN','SN']" :key="opt"
-                        class="tenor-btn" :class="{ active: tf.tenorQuick === opt }"
-                        @click="tf.tenorQuick = opt">{{ opt }}</button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 交易日期 -->
+                <!-- 交易日 -->
                 <div class="td-row">
                   <div class="td-label td-label--w" :title="t('fxSwap.fieldTradeDate')">{{ t('fxSwap.fieldTradeDate') }} <span class="req">*</span></div>
                   <div class="td-value td-value--split">
@@ -283,94 +290,12 @@
                   </div>
                 </div>
 
-                <!-- 起息日/到期日 -->
+                <!-- 起息日 -->
                 <div class="td-row">
-                  <div class="td-label td-label--w" :title="t('fxSwap.fieldNearFarDate')">{{ t('fxSwap.fieldNearFarDate') }} <span class="req">*</span></div>
-                  <div class="td-value td-value--split">
-                    <el-date-picker v-model="tf.nearDate" type="date" value-format="YYYY-MM-DD"
-                      size="small" style="flex:1" :placeholder="t('fxSwap.placeholderDate')" @change="calcTenorDays" />
-                    <el-date-picker v-model="tf.farDate" type="date" value-format="YYYY-MM-DD"
-                      size="small" style="flex:1" :placeholder="t('fxSwap.placeholderDate')" @change="calcTenorDays" />
-                  </div>
-                </div>
-
-                <!-- 期限(天) -->
-                <div class="td-row">
-                  <div class="td-label td-label--w" :title="t('fxSwap.fieldTenorDays')">{{ t('fxSwap.fieldTenorDays') }}</div>
-                  <div class="td-value td-value--auto">
-                    <el-input :value="tf.tenorDays" disabled size="small" style="width:100%" />
-                  </div>
-                </div>
-
-                <!-- 近端远期点/近端汇率 -->
-                <div class="td-row">
-                  <div class="td-label td-label--w" :title="t('fxSwap.fieldNearPtsRate')">{{ t('fxSwap.fieldNearPtsRate') }} <span class="req">*</span></div>
-                  <div class="td-value td-value--split">
-                    <el-input v-model="tf.nearSwapPts" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" @input="calcNearRate" />
-                    <el-input :value="tf.nearRate" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" disabled class="rate-auto" />
-                  </div>
-                </div>
-
-                <!-- 远端远期点/远端汇率 -->
-                <div class="td-row">
-                  <div class="td-label td-label--w" :title="t('fxSwap.fieldFarPtsRate')">{{ t('fxSwap.fieldFarPtsRate') }} <span class="req">*</span></div>
-                  <div class="td-value td-value--split">
-                    <el-input v-model="tf.farSwapPts" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" @input="calcFarRate" />
-                    <el-input :value="tf.farRate" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" disabled class="rate-auto" />
-                  </div>
-                </div>
-
-                <!-- 近端金额 -->
-                <div class="td-row">
-                  <div class="td-label td-label--w" :title="t('fxSwap.fieldNearAmount')">{{ t('fxSwap.fieldNearAmount') }} <span class="req">*</span></div>
-                  <div class="td-value td-value--split">
-                    <div class="amt-cell">
-                      <button class="amt-dir-tag" :class="tf.direction === 'BUY' ? 'amt-buy' : 'amt-sell'" @click="tf.direction = tf.direction === 'BUY' ? 'SELL' : 'BUY'">
-                        {{ tf.direction === 'BUY' ? 'BUY' : 'SELL' }} <span class="swap-icon">⇌</span>
-                      </button>
-                      <el-input v-model="tf.nearAmt1" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
-                    </div>
-                    <div class="amt-cell">
-                      <button class="amt-dir-tag" :class="tf.direction === 'BUY' ? 'amt-sell' : 'amt-buy'">
-                        {{ tf.direction === 'BUY' ? 'SELL' : 'BUY' }}
-                      </button>
-                      <el-input v-model="tf.nearAmt2" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 远端金额 -->
-                <div class="td-row">
-                  <div class="td-label td-label--w" :title="t('fxSwap.fieldFarAmount')">{{ t('fxSwap.fieldFarAmount') }} <span class="req">*</span></div>
-                  <div class="td-value td-value--split">
-                    <div class="amt-cell">
-                      <button class="amt-dir-tag" :class="tf.direction === 'BUY' ? 'amt-sell' : 'amt-buy'" @click="tf.direction = tf.direction === 'BUY' ? 'SELL' : 'BUY'">
-                        {{ tf.direction === 'BUY' ? 'SELL' : 'BUY' }} <span class="swap-icon">⇌</span>
-                      </button>
-                      <el-input v-model="tf.farAmt1" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
-                    </div>
-                    <div class="amt-cell">
-                      <button class="amt-dir-tag" :class="tf.direction === 'BUY' ? 'amt-buy' : 'amt-sell'">
-                        {{ tf.direction === 'BUY' ? 'BUY' : 'SELL' }}
-                      </button>
-                      <el-input v-model="tf.farAmt2" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="flex:1" />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 代客外部流水号 -->
-                <div class="td-row">
-                  <div class="td-label td-label--w" :title="t('fxSwap.fieldClientExtNo')">{{ t('fxSwap.fieldClientExtNo') }}</div>
+                  <div class="td-label td-label--w" :title="t('fxSwap.fieldValueDate')">{{ t('fxSwap.fieldValueDate') }} <span class="req">*</span></div>
                   <div class="td-value">
-                    <el-input v-model="tf.clientExtNo" size="small" :placeholder="t('fxSwap.inputPlaceholder')" style="width:100%" />
-                  </div>
-                </div>
-
-                <!-- NoRound -->
-                <div class="td-row">
-                  <div class="td-label td-label--w">NoRound</div>
-                  <div class="td-value">
-                    <el-checkbox v-model="tf.noRound" size="small" />
+                    <el-date-picker v-model="tf.valueDate" type="date" value-format="YYYY-MM-DD"
+                      size="small" style="width:100%" :placeholder="t('fxSwap.placeholderDate')" />
                   </div>
                 </div>
 
@@ -493,52 +418,25 @@ const drawerVisible = ref(false)
 const currentRow    = ref(null)
 
 const tf = reactive({
-  currencyPair:  '',
-  direction:     'BUY',
-  spotRate:      '',
-  tenorQuick:    '',
-  tradeDate:     new Date().toISOString().slice(0, 10),
-  tradeTime:     '',
-  nearDate:      '',
-  farDate:       '',
-  tenorDays:     0,
-  nearSwapPts:   '',
-  nearRate:      '',
-  farSwapPts:    '',
-  farRate:       '',
-  nearAmt1:      '',
-  nearAmt2:      '',
-  farAmt1:       '',
-  farAmt2:       '',
-  nearSpread:    '',
-  farSpread:     '',
-  nearMargin:    '',
-  farMargin:     '',
-  clientExtNo:   '',
-  noRound:       false,
-  account:       '',
-  counterparty:  '',
-  tradeNature:   'internal',
-  externalNo:    '',
-  externalSystem:'RCS',
-  purpose:       '',
-  remark:        '',
+  currencyPair:   '',
+  direction:      'BUY',
+  spotRate:       '',
+  tenorQuick:     '',
+  valueDate:      '',
+  tradeDate:      new Date().toISOString().slice(0, 10),
+  tradeTime:      '',
+  amt1:           '',
+  amt2:           '',
+  clientExtNo:    '',
+  noRound:        false,
+  account:        '',
+  counterparty:   '',
+  tradeNature:    'internal',
+  externalNo:     '',
+  externalSystem: 'RCS',
+  purpose:        '',
+  remark:         '',
 })
-
-function calcNearRate() {
-  const spot = parseFloat(tf.spotRate), pts = parseFloat(tf.nearSwapPts)
-  tf.nearRate = (!isNaN(spot) && !isNaN(pts)) ? (spot + pts * 0.0001).toFixed(6) : ''
-}
-function calcFarRate() {
-  const spot = parseFloat(tf.spotRate), pts = parseFloat(tf.farSwapPts)
-  tf.farRate = (!isNaN(spot) && !isNaN(pts)) ? (spot + pts * 0.0001).toFixed(6) : ''
-}
-function calcTenorDays() {
-  if (tf.nearDate && tf.farDate) {
-    const diff = Math.round((new Date(tf.farDate) - new Date(tf.nearDate)) / 86400000)
-    tf.tenorDays = diff >= 0 ? diff : 0
-  }
-}
 
 function handleDetail(row) {
   ElMessage.info(`${t('fxSwap.actionDetail')}: ${row.symbol}`)
@@ -556,11 +454,8 @@ function handleInternalTransfer(row) {
 function resetForm() {
   Object.assign(tf, {
     currencyPair: '', direction: 'BUY', spotRate: '', tenorQuick: '',
-    tradeDate: new Date().toISOString().slice(0, 10), tradeTime: '',
-    nearDate: '', farDate: '', tenorDays: 0,
-    nearSwapPts: '', nearRate: '', farSwapPts: '', farRate: '',
-    nearAmt1: '', nearAmt2: '', farAmt1: '', farAmt2: '',
-    nearSpread: '', farSpread: '', nearMargin: '', farMargin: '',
+    valueDate: '', tradeDate: new Date().toISOString().slice(0, 10), tradeTime: '',
+    amt1: '', amt2: '',
     clientExtNo: '', noRound: false,
     account: '', counterparty: '',
     tradeNature: 'internal', externalNo: '', externalSystem: 'RCS',
@@ -1038,6 +933,7 @@ const tableData = ref([
 .amt-dir-tag.amt-sell[onClick] { cursor: pointer; }
 button.amt-dir-tag { cursor: pointer; }
 .swap-icon { font-size: 13px; }
+.amt-ccy-hint { font-size: 11px; color: #999; margin-left: 2px; }
 
 /* 自动计算汇率（蓝色只读） */
 .rate-auto {
