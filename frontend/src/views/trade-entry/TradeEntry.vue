@@ -876,17 +876,6 @@
               </div>
             </div>
 
-            <!-- 计息方式 -->
-            <div class="fs-row">
-              <div class="fs-label">{{ t('te.ibInterestType') }} <span class="req">*</span></div>
-              <div class="fs-value">
-                <el-select v-model="ib.interestType" size="small" style="width:100%">
-                  <el-option :label="t('te.ibInterestTypeStandard')" value="standard" />
-                  <el-option :label="t('te.ibInterestTypeDiscount')" value="discount" />
-                </el-select>
-              </div>
-            </div>
-
             <!-- 期初本金/期末本金：始终同行，贴现模式下期初本金自动反算 -->
             <div class="fs-row">
               <div class="fs-label">{{ t('te.ibPrincipal') }} <span class="req">*</span></div>
@@ -984,6 +973,17 @@
           <!-- ③ Interest Methods -->
           <div class="fs-card">
             <div class="fs-title"><span class="fs-bar"></span>{{ t('te.ibSecInterestMethods') }}</div>
+
+            <!-- 计息方式 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ibInterestType') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-select v-model="ib.interestType" size="small" style="width:100%">
+                  <el-option :label="t('te.ibInterestTypeStandard')" value="standard" />
+                  <el-option :label="t('te.ibInterestTypeDiscount')" value="discount" />
+                </el-select>
+              </div>
+            </div>
 
             <!-- 利率 / 贴现率 -->
             <div class="fs-row">
