@@ -848,6 +848,287 @@
 
         </template>
 
+        <!-- ══ 同业拆借 表单 ══ -->
+        <template v-else-if="selectedProduct === 'interbank'">
+
+          <!-- ① 交易信息 -->
+          <div class="fs-card">
+            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secTradeInfo') }}</div>
+
+            <!-- 货币 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ibCurrency') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-select v-model="ib.currency" size="small" style="width:100%">
+                  <el-option v-for="c in CCY_LIST" :key="c" :label="c" :value="c" />
+                </el-select>
+              </div>
+            </div>
+
+            <!-- 交易方向 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.tradeDirection') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-select v-model="ib.direction" size="small" style="width:100%">
+                  <el-option :label="t('te.ibDirLoan')"    value="loan" />
+                  <el-option :label="t('te.ibDirDeposit')" value="deposit" />
+                </el-select>
+              </div>
+            </div>
+
+            <!-- 计息方式 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ibInterestType') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-select v-model="ib.interestType" size="small" style="width:100%">
+                  <el-option :label="t('te.ibInterestTypeStandard')" value="standard" />
+                  <el-option :label="t('te.ibInterestTypeDiscount')" value="discount" />
+                </el-select>
+              </div>
+            </div>
+
+            <!-- 期初本金/期末本金：始终同行，贴现模式下期初本金自动反算 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ibPrincipal') }} <span class="req">*</span></div>
+              <div class="fs-value" style="gap:6px">
+                <div style="display:flex; gap:6px; width:100%">
+                  <!-- 期初本金：标准模式可编辑，贴现模式自动反算 -->
+                  <el-input
+                    v-if="ib.interestType === 'standard'"
+                    v-model="ib.openPrincipal"
+                    size="small" :placeholder="t('te.inputPlaceholder')" style="flex:1"
+                  />
+                  <el-input
+                    v-else
+                    v-model="ib.openPrincipal"
+                    :placeholder="t('te.inputPlaceholder')"
+                    size="small" style="flex:1"
+                  />
+                  <!-- 期末本金：始终可编辑 -->
+                  <el-input v-model="ib.closePrincipal" size="small" :placeholder="t('te.inputPlaceholder')" style="flex:1" />
+                </div>
+              </div>
+            </div>
+
+            <!-- 业务品种 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.extBusinessType') }}</div>
+              <div class="fs-value">
+                <el-select v-model="ib.businessType" size="small" style="width:100%" clearable :placeholder="t('te.inputPlaceholder')">
+                  <el-option label="同业拆借" value="iblending" />
+                  <el-option label="同业存款" value="ibdeposit" />
+                </el-select>
+              </div>
+            </div>
+
+            <!-- 交易日 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.tradeDate') }} <span class="req">*</span></div>
+              <div class="fs-value" style="gap:6px">
+                <el-date-picker v-model="ib.tradeDate" type="date" value-format="YYYY-MM-DD"
+                  size="small" style="flex:1" :placeholder="t('te.selectDate')" />
+                <el-time-picker v-model="ib.tradeTime" format="HH:mm:ss" value-format="HH:mm:ss"
+                  size="small" style="width:120px" :placeholder="t('te.selectTime')" />
+              </div>
+            </div>
+
+            <!-- 起息日 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ibValueDate') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-date-picker v-model="ib.valueDate" type="date" value-format="YYYY-MM-DD"
+                  size="small" style="width:100%" :placeholder="t('te.selectDate')" @change="calcIbTenor" />
+              </div>
+            </div>
+
+            <!-- 到期日 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.maturityDate') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-date-picker v-model="ib.maturityDate" type="date" value-format="YYYY-MM-DD"
+                  size="small" style="width:100%" :placeholder="t('te.selectDate')" @change="calcIbTenor" />
+              </div>
+            </div>
+
+            <!-- 期限(天) -->
+            <div class="fs-row fs-row--last">
+              <div class="fs-label">{{ t('te.tenor') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-input :model-value="ib.tenorDays" disabled size="small"
+                  style="width:100%" :placeholder="t('te.autoFill')" class="fc--readonly" />
+              </div>
+            </div>
+          </div>
+
+          <!-- ② 交易账户 -->
+          <div class="fs-card">
+            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secTradeAccount') }}</div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.tradeAccount') }} <span class="req">*</span></div>
+              <div class="fs-value" style="gap:6px">
+                <el-input v-model="ib.account" size="small" :placeholder="t('te.inputPlaceholder')" style="flex:1" />
+                <el-input :model-value="t('te.autoFill')" disabled size="small" style="width:110px" class="fc--readonly" />
+              </div>
+            </div>
+
+            <div class="fs-row fs-row--last">
+              <div class="fs-label">{{ t('te.counterparty') }} <span class="req">*</span></div>
+              <div class="fs-value" style="gap:6px">
+                <el-input v-model="ib.counterparty" size="small" :placeholder="t('te.inputPlaceholder')" style="flex:1" />
+                <el-input :model-value="t('te.autoFill')" disabled size="small" style="width:110px" class="fc--readonly" />
+              </div>
+            </div>
+          </div>
+
+          <!-- ③ Interest Methods -->
+          <div class="fs-card">
+            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.ibSecInterestMethods') }}</div>
+
+            <!-- 利率 / 贴现率 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ ib.interestType === 'discount' ? t('te.ibDiscountRate') : t('te.ibInterestRate') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-input v-model="ib.interestRate" size="small" :placeholder="t('te.inputPlaceholder')" style="width:100%" />
+              </div>
+            </div>
+
+            <!-- 计息基础 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ibDayCount') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-select v-model="ib.dayCount" size="small" style="width:100%">
+                  <el-option label="ACT/360" value="ACT/360" />
+                  <el-option label="ACT/365" value="ACT/365" />
+                  <el-option label="30/360"  value="30/360"  />
+                  <el-option label="ACT/ACT" value="ACT/ACT" />
+                </el-select>
+              </div>
+            </div>
+
+            <!-- 支付惯例 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ibPayConvention') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-select v-model="ib.payConvention" size="small" style="width:100%">
+                  <el-option label="Modified Following" value="Modified Following" />
+                  <el-option label="Following"          value="Following"          />
+                  <el-option label="Preceding"          value="Preceding"          />
+                  <el-option label="Unadjusted"         value="Unadjusted"         />
+                </el-select>
+              </div>
+            </div>
+
+            <!-- 节假日 -->
+            <div class="fs-row fs-row--last">
+              <div class="fs-label">{{ t('te.ibHolidayCalendar') }}</div>
+              <div class="fs-value">
+                <el-select v-model="ib.holidayCalendar" multiple size="small" style="width:100%">
+                  <el-option v-for="c in CCY_LIST" :key="c" :label="c" :value="c" />
+                </el-select>
+              </div>
+            </div>
+          </div>
+
+          <!-- ④ 备注 -->
+          <div class="fs-card">
+            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secRemarks') }}</div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.tradeNature') }}</div>
+              <div class="fs-value">
+                <el-select v-model="ib.tradeNature" size="small" style="width:100%">
+                  <el-option :label="t('te.natureInterbank')"   value="interbank" />
+                  <el-option :label="t('te.natureProprietary')" value="proprietary" />
+                </el-select>
+              </div>
+            </div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.externalNo') }}</div>
+              <div class="fs-value" style="gap:6px">
+                <el-input v-model="ib.externalNo" size="small" :placeholder="t('te.inputPlaceholder')" style="flex:1" />
+                <el-select v-model="ib.externalSystem" size="small" style="width:80px">
+                  <el-option label="RCS" value="RCS" />
+                  <el-option label="Bloomberg" value="Bloomberg" />
+                </el-select>
+              </div>
+            </div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.tradePurpose') }}</div>
+              <div class="fs-value">
+                <el-input v-model="ib.tradePurpose" size="small" :placeholder="t('te.inputPlaceholder')" style="width:100%" />
+              </div>
+            </div>
+
+            <div class="fs-row fs-row--last">
+              <div class="fs-label">{{ t('te.remarks') }}</div>
+              <div class="fs-value">
+                <el-input v-model="ib.memo" size="small" :placeholder="t('te.memoPlaceholder')" style="width:100%" />
+              </div>
+            </div>
+          </div>
+
+          <!-- ⑤ 拓展字段 -->
+          <div class="fs-card">
+            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secExtFields') }}</div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ourRecvSettlePath') }}</div>
+              <div class="fs-value">
+                <el-select v-model="ib.ourRecvSettlePath" size="small" style="width:100%" clearable :placeholder="t('te.inputPlaceholder')" />
+              </div>
+            </div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.counterPaySettlePath') }}</div>
+              <div class="fs-value">
+                <el-select v-model="ib.counterPaySettlePath" size="small" style="width:100%" clearable />
+              </div>
+            </div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ourPaySettlePath') }}</div>
+              <div class="fs-value">
+                <el-select v-model="ib.ourPaySettlePath" size="small" style="width:100%" clearable :placeholder="t('te.inputPlaceholder')" />
+              </div>
+            </div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.counterRecvSettlePath') }}</div>
+              <div class="fs-value">
+                <el-select v-model="ib.counterRecvSettlePath" size="small" style="width:100%" clearable />
+              </div>
+            </div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.clearingMethod') }}</div>
+              <div class="fs-value">
+                <el-select v-model="ib.clearingType" size="small" style="width:100%" clearable :placeholder="t('te.inputPlaceholder')">
+                  <el-option label="DVP" value="DVP" />
+                  <el-option label="FOP" value="FOP" />
+                </el-select>
+              </div>
+            </div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.tradeMethod') }}</div>
+              <div class="fs-value">
+                <el-select v-model="ib.tradeMethod" size="small" style="width:100%" clearable :placeholder="t('te.inputPlaceholder')" />
+              </div>
+            </div>
+
+            <div class="fs-row fs-row--last">
+              <div class="fs-label">{{ t('te.tradeVenue') }}</div>
+              <div class="fs-value">
+                <el-select v-model="ib.tradeVenue" size="small" style="width:100%" clearable :placeholder="t('te.inputPlaceholder')" />
+              </div>
+            </div>
+          </div>
+
+        </template>
+
         <!-- ══ 其他产品占位 ══ -->
         <template v-else>
           <div class="placeholder-tip">
@@ -882,7 +1163,7 @@
 
       <!-- 遍历各分析面板 -->
       <div
-        v-for="item in analysisItems.value"
+        v-for="item in analysisItems"
         :key="item.key"
         class="ap-card"
         :class="{ 'ap-card--open': expandedPanels[item.key] }"
@@ -1300,6 +1581,8 @@ function handleClear() {
     calcBondAmounts()
     cfManualRows.value = []
     cfIsAdding.value   = false
+  } else if (selectedProduct.value === 'interbank') {
+    Object.assign(ib, emptyIb())
   } else {
     Object.assign(fxFwd, emptyFxFwd())
   }
@@ -1341,6 +1624,74 @@ function emptyBond() {
 }
 
 const bond = reactive(emptyBond())
+
+// ─── 同业拆借 / Money Market ──────────────────────────────────────────────────
+function emptyIb() {
+  const now = new Date()
+  const today = now.toISOString().slice(0, 10)
+  const nowTime = now.toTimeString().slice(0, 8)
+  return {
+    currency:      'USD',
+    direction:     'loan',
+    interestType:  'standard',
+    openPrincipal: '',
+    closePrincipal:'',
+    businessType:  '',
+    tradeDate:     today,
+    tradeTime:     nowTime,
+    valueDate:     '',
+    maturityDate:  '',
+    tenorDays:     '',
+    interestRate:  '',
+    dayCount:      'ACT/360',
+    payConvention: 'Modified Following',
+    holidayCalendar: ['USD'],
+    account:       '',
+    counterparty:  '',
+    tradeNature:   'interbank',
+    externalNo:    '',
+    externalSystem:'RCS',
+    tradePurpose:  '',
+    memo:          '',
+    // 拓展字段
+    ourRecvSettlePath:     '',
+    counterPaySettlePath:  '',
+    ourPaySettlePath:      '',
+    counterRecvSettlePath: '',
+    clearingType:  '',
+    tradeMethod:   '',
+    tradeVenue:    '',
+  }
+}
+
+const ib = reactive(emptyIb())
+
+function calcIbTenor() {
+  if (ib.valueDate && ib.maturityDate) {
+    const d1 = new Date(ib.valueDate)
+    const d2 = new Date(ib.maturityDate)
+    const diff = Math.round((d2 - d1) / 86400000)
+    ib.tenorDays = diff >= 0 ? String(diff) : ''
+  } else {
+    ib.tenorDays = ''
+  }
+}
+
+// 贴现模式：期初本金（实付）= 面值 / (1 + 利率 × 天数 / 计息基础)
+const ibDiscountBasis = computed(() => {
+  if (ib.dayCount === 'ACT/365') return 365
+  return 360  // ACT/360 / 30/360 / ACT/ACT 统一用360作简化
+})
+
+const ibOpenPrincipalCalc = computed(() => {
+  if (ib.interestType !== 'discount') return ''
+  const face = parseFloat(String(ib.closePrincipal).replace(/,/g, ''))
+  const rate = parseFloat(ib.interestRate) / 100
+  const days = parseFloat(ib.tenorDays)
+  if (!face || isNaN(rate) || isNaN(days) || days <= 0) return ''
+  const result = face / (1 + rate * days / ibDiscountBasis.value)
+  return result.toFixed(2)
+})
 
 const bondFmt8 = v => Number(v || 0).toFixed(8)
 
@@ -2262,6 +2613,25 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
   cursor: pointer;
   flex-shrink: 0;
   &:hover { color: var(--git-primary); }
+}
+
+/* ─── 同业拆借：贴现公式提示 ─── */
+.ib-calc-field {
+  :deep(.el-input__inner) {
+    color: var(--git-primary) !important;
+    -webkit-text-fill-color: var(--git-primary) !important;
+    font-weight: 600;
+  }
+  :deep(.el-input__wrapper) { background: #f5f8ff !important; }
+}
+.ib-calc-hint {
+  display: block;
+  font-size: 10px;
+  color: var(--git-text-3);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .placeholder-tip {
