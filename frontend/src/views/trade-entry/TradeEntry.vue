@@ -871,7 +871,7 @@
               <div class="fs-value">
                 <el-select v-model="ib.direction" size="small" style="width:100%">
                   <el-option :label="t('te.ibDirLoan')"    value="loan" />
-                  <el-option :label="t('te.ibDirDeposit')" value="deposit" />
+                  <el-option :label="t('te.ibDirBorrow')"  value="borrow" />
                 </el-select>
               </div>
             </div>
@@ -904,8 +904,9 @@
               <div class="fs-label">{{ t('te.extBusinessType') }}</div>
               <div class="fs-value">
                 <el-select v-model="ib.businessType" size="small" style="width:100%" clearable :placeholder="t('te.inputPlaceholder')">
-                  <el-option label="同业拆借" value="iblending" />
-                  <el-option label="同业存款" value="ibdeposit" />
+                  <el-option :label="t('te.ibLendTypeNormal')" value="normal" />
+                  <el-option :label="t('te.ibLendTypeFasbis')" value="fasbis" />
+                  <el-option :label="t('te.ibLendTypeSdbi')"   value="sdbi" />
                 </el-select>
               </div>
             </div>
