@@ -130,7 +130,7 @@
         :header-cell-style="{ background:'#f5f7fa', color:'#606266', fontWeight:'600', fontSize:'13px' }"
         @selection-change="val => selectedRows = val"
       >
-        <el-table-column v-if="activeTab === 'failed' || activeTab === 'unknown'" type="selection" width="44" fixed="left" />
+        <el-table-column v-if="activeTab === 'failed' || activeTab === 'unknown'" type="selection" width="44" fixed="left" align="center" header-align="center" />
 
         <el-table-column prop="seq" :label="t('internalTransfer.seq')" width="60" align="center" fixed="left" />
 
@@ -917,6 +917,12 @@ async function confirmSuspense() {
 
 :deep(.el-table .cell) {
   white-space: nowrap;
+}
+:deep(.el-table .el-table-column--selection .cell) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
 }
 
 :deep(.col-ops .cell) {

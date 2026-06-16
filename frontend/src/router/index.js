@@ -7,7 +7,8 @@ import TaxRuleConfig from '@/views/base-data/TaxRuleConfig.vue'
 import TradeQuery from '@/views/query/TradeQuery.vue'
 import Placeholder from '@/views/Placeholder.vue'
 import InternalTransferError from '@/views/workbench/InternalTransferError.vue'
-import SuspenseAcct from '@/views/workbench/SuspenseAcct.vue'
+import SuspenseAcct      from '@/views/workbench/SuspenseAcct.vue'
+import PendingDelivery   from '@/views/workbench/PendingDelivery.vue'
 import OtherReview from '@/views/workbench/OtherReview.vue'
 import ScenarioQuery from '@/views/pnl-attribution/ScenarioQuery.vue'
 import AttributionReport from '@/views/pnl-attribution/AttributionReport.vue'
@@ -106,7 +107,8 @@ const routes = [
       { path: 'workbench/cashflow-entry', name: 'cashflow-entry', component: Placeholder, meta: { title: '单边现金流', group: '交易录入' } },
       { path: 'workbench/fix-mgmt', name: 'fix-mgmt', component: Placeholder, meta: { title: '定盘管理', group: '业务管理' } },
       { path: 'workbench/internal-transfer-error', name: 'internal-transfer-error', component: InternalTransferError, meta: { title: '内部账划转异常处理', group: '内部账处理' } },
-      { path: 'workbench/suspense-acct', name: 'suspense-acct', component: SuspenseAcct, meta: { title: '挂账与销账处理', group: '内部账处理' } }
+      { path: 'workbench/suspense-acct',     name: 'suspense-acct',     component: SuspenseAcct, meta: { title: '挂账与销账处理', group: '内部账处理' } },
+      { path: 'workbench/pending-delivery',  name: 'pending-delivery',  component: PendingDelivery, meta: { title: '收付待交割处理', group: '内部账处理' } }
     ]
   }
 ]

@@ -99,6 +99,7 @@ const menuGroups = [
     nameKey: 'workbench.internalAcct',
     icon: markRaw(Switch),
     children: [
+      { labelKey: 'workbench.pendingDelivery',       path: '/workbench/pending-delivery' },
       { labelKey: 'workbench.internalTransferError', path: '/workbench/internal-transfer-error' },
       { labelKey: 'workbench.suspenseAcct',          path: '/workbench/suspense-acct' }
     ]
