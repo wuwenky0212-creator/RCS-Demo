@@ -889,9 +889,10 @@
                   />
                   <el-input
                     v-else
-                    v-model="ib.openPrincipal"
-                    :placeholder="t('te.inputPlaceholder')"
-                    size="small" style="flex:1"
+                    :model-value="ib.openPrincipal"
+                    disabled
+                    :placeholder="t('te.autoFill')"
+                    size="small" style="flex:1" class="fc--readonly"
                   />
                   <!-- 期末本金：始终可编辑 -->
                   <el-input v-model="ib.closePrincipal" size="small" :placeholder="t('te.inputPlaceholder')" style="flex:1" />
@@ -904,9 +905,8 @@
               <div class="fs-label">{{ t('te.extBusinessType') }}</div>
               <div class="fs-value">
                 <el-select v-model="ib.businessType" size="small" style="width:100%" clearable :placeholder="t('te.inputPlaceholder')">
-                  <el-option :label="t('te.ibLendTypeNormal')" value="normal" />
-                  <el-option :label="t('te.ibLendTypeFasbis')" value="fasbis" />
-                  <el-option :label="t('te.ibLendTypeSdbi')"   value="sdbi" />
+                  <el-option :label="t('te.ibLendTypeTimeDeposit')" value="timeDeposit" />
+                  <el-option :label="t('te.ibLendTypeOvernightDeposit')" value="overnightDeposit" />
                 </el-select>
               </div>
             </div>
@@ -1692,6 +1692,15 @@ const ibOpenPrincipalCalc = computed(() => {
   if (!face || isNaN(rate) || isNaN(days) || days <= 0) return ''
   const result = face / (1 + rate * days / ibDiscountBasis.value)
   return result.toFixed(2)
+})
+
+// 贴现模式下，期初本金随期末本金/贴现率/期限/计息基础变化自动反算并回填
+watch(ibOpenPrincipalCalc, (val) => {
+  if (ib.interestType === 'discount') ib.openPrincipal = val
+})
+// 切换到贴现模式时立即触发一次反算
+watch(() => ib.interestType, (val) => {
+  if (val === 'discount') ib.openPrincipal = ibOpenPrincipalCalc.value
 })
 
 const bondFmt8 = v => Number(v || 0).toFixed(8)
