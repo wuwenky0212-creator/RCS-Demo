@@ -905,6 +905,7 @@
               <div class="fs-label">{{ t('te.extBusinessType') }}</div>
               <div class="fs-value">
                 <el-select v-model="ib.businessType" size="small" style="width:100%" clearable :placeholder="t('te.inputPlaceholder')">
+                  <el-option :label="t('te.ibLendTypeInterbank')" value="interbank" />
                   <el-option :label="t('te.ibLendTypeTimeDeposit')" value="timeDeposit" />
                   <el-option :label="t('te.ibLendTypeOvernightDeposit')" value="overnightDeposit" />
                 </el-select>
@@ -2056,20 +2057,48 @@ function autoTenor(t) {
   }
 }
 
-// ─── 平价汇率：各笔交易的算术平均 ─────────────────────────────────────────────
-function numAvg(arr) {
-  const nums = arr.map(v => parseFloat(v)).filter(n => !isNaN(n) && n > 0)
-  if (!nums.length) return ''
-  return (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(6)
+// ─── 平价汇率：平价远期 = 平价即期 + 平价升贴水 ───────────────────────────────
+// 业务逻辑说明：
+//   平价即期汇率：当前市场即期价，同一交易日所有笔交易共用同一个值，由总行手工报价填入，
+//                不从逐笔表格的"即期汇率"汇总/平均得出。
+//   平价升贴水  ：由系统按各笔交易的外币金额（Mi）对各笔自己的升贴水（Pi）做加权平均，
+//                自动给出一个默认值 = Σ(Mi×Pi)/ΣMi，总行可手动覆盖。这与"平价远期汇率"
+//                的加权平均是同一套数学逻辑——因为同一交易日所有笔共用同一个即期价 S，
+//                每笔自己的远期价 Fi = S + Pi，对 Fi 做 Mi 加权平均等价于
+//                S + Σ(Mi×Pi)/ΣMi，所以"加权平均"机制保留在了升贴水这一步上。
+//   平价远期汇率：唯一真正由系统自动计算的字段 = 平价即期汇率 + 平价升贴水（简单加法），
+//                支持手动覆盖。
+function parNum(v) {
+  const n = parseFloat(v)
+  return isNaN(n) ? null : n
 }
-const avgSpotRate = computed(() => numAvg(avgFwdTrades.value.map(t => t.spotRate)))
-const avgPremium  = computed(() => numAvg(avgFwdTrades.value.map(t => t.premium)))
-const avgFwdRate  = computed(() => numAvg(avgFwdTrades.value.map(t => t.fwdRate)))
+// Mi = 该笔交易的外币金额（按方向取用 buyAmount 或 sellAmount）
+function afNotional(t) {
+  return parNum(t.direction === 'BUY' ? t.buyAmount : t.sellAmount)
+}
+const avgPremium = computed(() => {
+  let sumW = 0, sumWV = 0
+  avgFwdTrades.value.forEach(t => {
+    const w = afNotional(t)
+    const v = parNum(t.premium)
+    if (w !== null && w > 0 && v !== null) {
+      sumW += w
+      sumWV += w * v
+    }
+  })
+  return sumW > 0 ? (sumWV / sumW).toFixed(6) : ''
+})
+watch(avgPremium, (val) => { afCommon.avgPremiumInput = val })
 
-// 平价汇率字段自动同步（计算值变化时自动填入，用户也可手动覆盖）
-watch(avgSpotRate, (val) => { afCommon.avgSpotRateInput = val })
-watch(avgPremium,  (val) => { afCommon.avgPremiumInput  = val })
-watch(avgFwdRate,  (val) => { afCommon.avgFwdRateInput  = val })
+const avgFwdRate = computed(() => {
+  const spot = parNum(afCommon.avgSpotRateInput)
+  const premium = parNum(afCommon.avgPremiumInput)
+  if (spot === null || premium === null) return ''
+  return (spot + premium).toFixed(6)
+})
+
+// 平价远期汇率随平价即期/平价升贴水变化自动同步（用户也可手动覆盖）
+watch(avgFwdRate, (val) => { afCommon.avgFwdRateInput = val })
 
 function addAvgFwdTrade() {
   if (avgFwdTrades.value.length < maxAvgFwdTrades) {
