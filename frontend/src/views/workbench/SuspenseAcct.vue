@@ -97,7 +97,7 @@
         :header-cell-style="{ background:'#f5f7fa', color:'#606266', fontWeight:'600', fontSize:'13px' }"
         @selection-change="val => selectedRows = val"
       >
-        <el-table-column v-if="activeTab === 'pending'" type="selection" width="44" fixed="left" />
+        <el-table-column v-if="activeTab === 'pending'" type="selection" width="44" fixed="left" align="center" />
         <el-table-column prop="seq"          :label="t('suspenseAcct.seq')"     width="60"  align="center" fixed="left" />
 
         <el-table-column :label="t('suspenseAcct.suspenseType')" width="110" align="center">
