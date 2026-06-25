@@ -142,9 +142,6 @@
 
         <el-table-column prop="externalNo"       :label="t('internalTransfer.externalNo')"   width="200" />
         <el-table-column prop="debitAccount"     :label="t('internalTransfer.debitAccount')"  width="150" />
-        <el-table-column :label="t('internalTransfer.debitFlag')" width="160" align="center">
-          <template #default="{ row }">{{ acctFlagMap[row.debitFlag] || row.debitFlag }}</template>
-        </el-table-column>
         <el-table-column prop="creditAccount"    :label="t('internalTransfer.creditAccount')" width="150" />
         <el-table-column :label="t('internalTransfer.creditFlag')" width="160" align="center">
           <template #default="{ row }">{{ acctFlagMap[row.creditFlag] || row.creditFlag }}</template>
@@ -165,16 +162,18 @@
 
         <el-table-column prop="generateDate" :label="t('internalTransfer.generateDate')"     width="110" />
         <el-table-column prop="plannedDate"  :label="t('internalTransfer.plannedDate')" width="120" />
+        <el-table-column prop="actualEntryDate" :label="t('internalTransfer.actualEntryDate')" width="120">
+          <template #default="{ row }">{{ row.actualEntryDate || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="actualEntryTime" :label="t('internalTransfer.actualEntryTime')" width="110">
+          <template #default="{ row }">{{ row.actualEntryTime || '-' }}</template>
+        </el-table-column>
         <el-table-column prop="operationOrg" :label="t('internalTransfer.operationOrg')"   width="130" />
         <el-table-column v-if="activeTab === 'success'" prop="remark" :label="t('internalTransfer.remark')" min-width="200" />
 
-        <el-table-column :label="t('common.actions')" width="140" fixed="right" align="center" class-name="col-ops">
+        <el-table-column v-if="activeTab === 'failed'" :label="t('common.actions')" width="100" fixed="right" align="center" class-name="col-ops">
           <template #default="{ row }">
-            <template v-if="activeTab === 'failed'">
-              <el-button link type="primary" size="small" @click="openResendSingle(row)">{{ t('internalTransfer.resend') }}</el-button>
-              <el-divider direction="vertical" />
-            </template>
-            <el-button link type="primary" size="small">{{ t('common.detail') }}</el-button>
+            <el-button link type="primary" size="small" @click="openResendSingle(row)">{{ t('internalTransfer.resend') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -220,7 +219,7 @@
       </div>
     </div>
     <el-form label-width="100px" style="padding: 12px 8px 0">
-      <el-form-item :label="t('internalTransfer.failedReason')" required>
+      <el-form-item :label="t('internalTransfer.failedReason')">
         <el-input
           v-model="setFailedReason"
           type="textarea"
@@ -231,7 +230,7 @@
     </el-form>
     <template #footer>
       <el-button @click="setFailedVisible = false">{{ t('common.cancel') }}</el-button>
-      <el-button type="danger" :disabled="!setFailedReason.trim()" @click="confirmSetFailed">{{ t('internalTransfer.confirmSetFailed') }}</el-button>
+      <el-button type="danger" @click="confirmSetFailed">{{ t('internalTransfer.confirmSetFailed') }}</el-button>
     </template>
   </el-dialog>
 
@@ -268,7 +267,7 @@
   <!-- ── 不入账弹窗 ── -->
   <el-dialog v-model="noEntryVisible" :title="t('internalTransfer.noEntryTitle')" width="500px" :close-on-click-modal="false">
     <el-form label-width="100px" style="padding: 0 8px">
-      <el-form-item :label="t('internalTransfer.noEntryReason')" required>
+      <el-form-item :label="t('internalTransfer.noEntryReason')">
         <el-input
           v-model="noEntryReason"
           type="textarea"
@@ -286,7 +285,7 @@
     </div>
     <template #footer>
       <el-button @click="noEntryVisible = false">{{ t('common.cancel') }}</el-button>
-      <el-button type="danger" :disabled="!noEntryReason.trim()" @click="confirmNoEntry">{{ t('internalTransfer.submitReview') }}</el-button>
+      <el-button type="danger" @click="confirmNoEntry">{{ t('internalTransfer.submitReview') }}</el-button>
     </template>
   </el-dialog>
 
@@ -384,6 +383,7 @@ const statusMap = computed(() => ({
 
 const acctFlagMap = computed(() => ({
   'CGL_INTERNAL':  t('internalTransfer.acctFlagCgl'),
+  'BGL_ACCOUNT':   t('internalTransfer.acctFlagBgl'),
   'BGL_PENDING':   t('internalTransfer.acctFlagBglPending'),
   'BGL_DEPOSIT':   t('internalTransfer.acctFlagBglDeposit'),
   'BGL_SETTLE':    t('internalTransfer.acctFlagBglSettle'),
@@ -440,15 +440,17 @@ const failedData = ref([
     seq:          1,
     paymentId:    'PMT-IB-20260508-001',
     externalNo:   'BANCS-20260508-7819',
-    debitAccount: 'HFZB****N001',
+    debitAccount: '1010****0021',
     debitFlag:    'CGL_INTERNAL',
     creditAccount:'2524****4301',
-    creditFlag:   'BGL_PENDING',
+    creditFlag:   'BGL_ACCOUNT',
     currency:     'USD',
     amount:       1_000_000.00,
     status:       '入账失败',
     generateDate: '2026-05-08',
     plannedDate:  '2026-05-11',
+    actualEntryDate: '',
+    actualEntryTime: '',
     operationOrg: 'Head Office Branch',
     // 挂账弹窗扩展字段
     paymentDate:    '2026-05-08',
@@ -467,15 +469,17 @@ const failedData = ref([
     seq:          2,
     paymentId:    'PMT-BD-20260508-001',
     externalNo:   'BANCS-20260508-3498',
-    debitAccount: 'shym****Y01',
+    debitAccount: '4032****0117',
     debitFlag:    'CGL_INTERNAL',
     creditAccount:'1303****8309',
-    creditFlag:   'BGL_PENDING',
+    creditFlag:   'BGL_ACCOUNT',
     currency:     'CNY',
     amount:       1_008_666.67,
     status:       '入账失败',
     generateDate: '2026-05-08',
     plannedDate:  '2026-05-08',
+    actualEntryDate: '',
+    actualEntryTime: '',
     operationOrg: 'BANKZB',
     paymentDate:    '2026-05-08',
     sendDate:       '2026-05-08',
@@ -493,15 +497,17 @@ const failedData = ref([
     seq:          3,
     paymentId:    'PMT-FX-20260508-002',
     externalNo:   'BANCS-20260508-2252',
-    debitAccount: 'USDCNH****001',
+    debitAccount: '5500****0091',
     debitFlag:    'CGL_INTERNAL',
     creditAccount:'9999****0012',
-    creditFlag:   'NET_NETTING',
+    creditFlag:   'BGL_ACCOUNT',
     currency:     'USD',
     amount:       10_000.00,
     status:       '入账失败',
     generateDate: '2026-05-08',
     plannedDate:  '2026-05-08',
+    actualEntryDate: '',
+    actualEntryTime: '',
     operationOrg: 'Financial Markets Dept',
     paymentDate:    '2026-05-08',
     sendDate:       '2026-05-08',
@@ -519,15 +525,17 @@ const failedData = ref([
     seq:          4,
     paymentId:    'PMT-MM-20260508-003',
     externalNo:   'BANCS-20260508-0341',
-    debitAccount: 'CBHB****2610',
+    debitAccount: '3100****2610',
     debitFlag:    'CGL_INTERNAL',
     creditAccount:'1303****0281',
-    creditFlag:   'BGL_DEPOSIT',
+    creditFlag:   'BGL_ACCOUNT',
     currency:     'CNY',
     amount:       426_039_536.47,
     status:       '入账失败',
     generateDate: '2026-05-08',
     plannedDate:  '2026-05-08',
+    actualEntryDate: '',
+    actualEntryTime: '',
     operationOrg: 'CBHB HQ',
     paymentDate:    '2026-05-08',
     sendDate:       '2026-05-08',
@@ -549,60 +557,68 @@ const unknownData = ref([
     seq:          1,
     paymentId:    'PMT-IB-20260509-004',
     externalNo:   'BANCS-20260509-1127',
-    debitAccount: 'HFZB****N002',
+    debitAccount: '1010****0034',
     debitFlag:    'CGL_INTERNAL',
     creditAccount:'2524****8802',
-    creditFlag:   'BGL_PENDING',
+    creditFlag:   'BGL_ACCOUNT',
     currency:     'USD',
     amount:       2_500_000.00,
     status:       '入账不明',
     generateDate: '2026-05-09',
     plannedDate:  '2026-05-12',
+    actualEntryDate: '',
+    actualEntryTime: '',
     operationOrg: 'Head Office Branch',
   },
   {
     seq:          2,
     paymentId:    'PMT-FX-20260509-005',
     externalNo:   'BANCS-20260509-3361',
-    debitAccount: 'USDCNH****002',
+    debitAccount: '5500****0108',
     debitFlag:    'CGL_INTERNAL',
     creditAccount:'9999****0033',
-    creditFlag:   'NET_NETTING',
+    creditFlag:   'BGL_ACCOUNT',
     currency:     'EUR',
     amount:       875_000.00,
     status:       '入账不明',
     generateDate: '2026-05-09',
     plannedDate:  '2026-05-09',
+    actualEntryDate: '',
+    actualEntryTime: '',
     operationOrg: 'Financial Markets Dept',
   },
   {
     seq:          3,
     paymentId:    'PMT-BD-20260509-003',
     externalNo:   'BANCS-20260509-5540',
-    debitAccount: 'shym****Y02',
+    debitAccount: '4032****0228',
     debitFlag:    'CGL_INTERNAL',
     creditAccount:'1303****9917',
-    creditFlag:   'BGL_PENDING',
+    creditFlag:   'BGL_ACCOUNT',
     currency:     'CNY',
     amount:       -3_120_000.00,
     status:       '入账不明',
     generateDate: '2026-05-09',
     plannedDate:  '2026-05-09',
+    actualEntryDate: '',
+    actualEntryTime: '',
     operationOrg: 'BANKZB',
   },
   {
     seq:          4,
     paymentId:    'PMT-MM-20260509-006',
     externalNo:   'BANCS-20260509-7793',
-    debitAccount: 'CBHB****3820',
+    debitAccount: '3100****3820',
     debitFlag:    'CGL_INTERNAL',
     creditAccount:'1303****0555',
-    creditFlag:   'BGL_DEPOSIT',
+    creditFlag:   'BGL_ACCOUNT',
     currency:     'CNY',
     amount:       88_560_000.00,
     status:       '入账不明',
     generateDate: '2026-05-09',
     plannedDate:  '2026-05-12',
+    actualEntryDate: '',
+    actualEntryTime: '',
     operationOrg: 'CBHB HQ',
   },
 ])
@@ -615,15 +631,17 @@ const successData = ref([
     seq:          1,
     paymentId:    'PMT-IB-20260507-003',
     externalNo:   'BANCS-20260507-6210',
-    debitAccount: 'HFZB****N001',           // HFZBIFIMN001 脱敏
+    debitAccount: '1010****0021',           // 101000000021 脱敏
     debitFlag:    'CGL_INTERNAL',
     creditAccount:'2524****4301',            // 2524410301 脱敏
-    creditFlag:   'BGL_SETTLE',
+    creditFlag:   'BGL_ACCOUNT',
     currency:     'USD',
     amount:       500_000.00,
     status:       '入账成功',
     generateDate: '2026-05-07',
     plannedDate:  '2026-05-08',
+    actualEntryDate: '2026-05-08',
+    actualEntryTime: '09:15:32',
     operationOrg: 'Head Office Branch',
     remark:       'Entry successful, BANCS response code: 00',
   },
@@ -631,15 +649,17 @@ const successData = ref([
     seq:          2,
     paymentId:    'PMT-BD-20260507-002',
     externalNo:   'BANCS-20260507-4812',
-    debitAccount: 'shym****Y01',            // shymalCNY01 脱敏
+    debitAccount: '4032****0117',            // 403200000117 脱敏
     debitFlag:    'CGL_INTERNAL',
     creditAccount:'6011****0000',            // 6011000000 脱敏
-    creditFlag:   'BGL_INCOME',
+    creditFlag:   'BGL_ACCOUNT',
     currency:     'CNY',
     amount:       980_000.00,
     status:       '入账成功',
     generateDate: '2026-05-07',
     plannedDate:  '2026-05-07',
+    actualEntryDate: '2026-05-07',
+    actualEntryTime: '14:32:08',
     operationOrg: 'BANKZB',
     remark:       'DVP delivery entry completed, BANCS response code: 00',
   },

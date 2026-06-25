@@ -2,7 +2,7 @@
   <div class="trade-entry-page" :class="{ 'is-combo': selectedProduct === 'fx-avg-forward' }">
 
     <!-- ① 左侧产品树 -->
-    <div class="product-tree">
+    <div class="product-tree" :style="{ width: treeWidth + 'px' }">
       <div class="tree-header">
         <el-icon class="tree-header-icon"><Grid /></el-icon>
         <span>{{ t('te.financialProducts') }}</span>
@@ -58,6 +58,9 @@
         </div>
       </div>
     </div>
+
+    <!-- 左侧拖拽分隔条：调整产品树宽度 -->
+    <div class="col-resizer" @mousedown="startResize('tree', $event)"></div>
 
     <!-- ② 中间表单区 -->
     <div class="form-panel">
@@ -1131,6 +1134,319 @@
 
         </template>
 
+        <!-- ══ NDCCS / 无本金交割货币互换 ══ -->
+        <template v-else-if="selectedProduct === 'ndccs'">
+
+          <!-- ① 交易信息 -->
+          <div class="fs-card">
+            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secTradeInfo') }}</div>
+
+            <!-- 货币对 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.currencyPair') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-select v-model="ndccs.currencyPair" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%">
+                  <el-option label="USD/IDR" value="USD/IDR" />
+                  <el-option label="USD/CNY" value="USD/CNY" />
+                  <el-option label="EUR/USD" value="EUR/USD" />
+                  <el-option label="USD/JPY" value="USD/JPY" />
+                </el-select>
+              </div>
+            </div>
+
+            <!-- 本金交换方式 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ndccsPrincipalExchange') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-select v-model="ndccs.principalExchange" size="small" style="width:100%">
+                  <el-option label="Begin" value="begin" />
+                  <el-option label="End"   value="end" />
+                  <el-option label="Both"  value="both" />
+                  <el-option label="None"  value="none" />
+                </el-select>
+              </div>
+            </div>
+
+            <!-- 交易日 / 时间 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.tradeDate') }} <span class="req">*</span></div>
+              <div class="fs-cols fs-cols--2">
+                <div class="fc">
+                  <el-date-picker v-model="ndccs.tradeDate" type="date" :placeholder="t('te.selectDate')"
+                    value-format="YYYY-MM-DD" size="small" style="width:100%" />
+                </div>
+                <div class="fc">
+                  <el-time-picker v-model="ndccs.tradeTime" :placeholder="t('te.selectTime')"
+                    value-format="HH:mm:ss" size="small" style="width:100%" />
+                </div>
+              </div>
+            </div>
+
+            <!-- 起息日 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ibValueDate') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-date-picker v-model="ndccs.valueDate" type="date" :placeholder="t('te.selectDate')"
+                  value-format="YYYY-MM-DD" size="small" style="width:100%" @change="calcNdccsTenor" />
+              </div>
+            </div>
+
+            <!-- 到期日 -->
+            <div class="fs-row fs-row--last">
+              <div class="fs-label">{{ t('te.maturityDate') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-date-picker v-model="ndccs.maturityDate" type="date" :placeholder="t('te.selectDate')"
+                  value-format="YYYY-MM-DD" size="small" style="width:100%" @change="calcNdccsTenor" />
+              </div>
+            </div>
+          </div>
+
+          <!-- ② 计息方式 -->
+          <div class="fs-card">
+            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.ndccsSecInterestMethod') }}</div>
+
+            <!-- Rec / Pay：方向 + 计息类型 + 自动填入货币 -->
+            <div class="fs-row">
+              <div class="fs-label">Rec/Pay</div>
+              <div class="fs-cols fs-cols--2">
+                <div class="fc">
+                  <span class="dir-tag dir-sell">Pay</span>
+                  <el-icon class="swap-icon"><Sort /></el-icon>
+                  <el-select v-model="ndccs.payRateType" size="small" style="flex:1;min-width:0">
+                    <el-option label="Float" value="float" />
+                    <el-option label="Fixed" value="fixed" />
+                  </el-select>
+                </div>
+                <div class="fc fc--autofill">{{ ndccsPayCcy || t('te.autoFill') }}</div>
+              </div>
+            </div>
+            <div class="fs-row">
+              <div class="fs-label"></div>
+              <div class="fs-cols fs-cols--2">
+                <div class="fc">
+                  <span class="dir-tag dir-buy">Rec</span>
+                  <el-icon class="swap-icon"><Sort /></el-icon>
+                  <el-select v-model="ndccs.recRateType" size="small" style="flex:1;min-width:0">
+                    <el-option label="Float" value="float" />
+                    <el-option label="Fixed" value="fixed" />
+                  </el-select>
+                </div>
+                <div class="fc fc--autofill">{{ ndccsRecCcy || t('te.autoFill') }}</div>
+              </div>
+            </div>
+
+            <!-- 浮动利率指标 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ndccsFloatIndex') }} <span class="req">*</span></div>
+              <div class="fs-cols fs-cols--2">
+                <div class="fc">
+                  <el-select v-model="ndccs.payFloatIndex" :placeholder="t('te.selectPlaceholder')" size="small" style="flex:1;min-width:0" clearable />
+                  <el-icon class="hd-icon" style="flex-shrink:0"><EditPen /></el-icon>
+                </div>
+                <div class="fc">
+                  <el-select v-model="ndccs.recFloatIndex" :placeholder="t('te.selectPlaceholder')" size="small" style="flex:1;min-width:0" clearable />
+                  <el-icon class="hd-icon" style="flex-shrink:0"><EditPen /></el-icon>
+                </div>
+              </div>
+            </div>
+
+            <!-- 汇率：单列全宽 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ndccsFxRate') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-input v-model="ndccs.fxRate" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" />
+              </div>
+            </div>
+
+            <!-- 名义本金 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ndccsNotional') }} <span class="req">*</span></div>
+              <div class="fs-cols fs-cols--2">
+                <div class="fc"><el-input v-model="ndccs.payNotional" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" /></div>
+                <div class="fc"><el-input v-model="ndccs.recNotional" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" /></div>
+              </div>
+            </div>
+
+            <!-- 计息频率 + 计息类型 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ndccsInterestFreq') }} <span class="req">*</span></div>
+              <div class="fs-cols fs-cols--2">
+                <div class="fc" style="gap:6px">
+                  <el-select v-model="ndccs.payInterestFreq" size="small" style="flex:1;min-width:0">
+                    <el-option label="1M" value="1M" /><el-option label="3M" value="3M" />
+                    <el-option label="6M" value="6M" /><el-option label="1Y" value="1Y" />
+                  </el-select>
+                  <el-select v-model="ndccs.payInterestType" size="small" style="flex:1;min-width:0">
+                    <el-option label="Simple Interest" value="simple" />
+                    <el-option label="Compound Interest" value="compound" />
+                  </el-select>
+                </div>
+                <div class="fc" style="gap:6px">
+                  <el-select v-model="ndccs.recInterestFreq" size="small" style="flex:1;min-width:0">
+                    <el-option label="1M" value="1M" /><el-option label="3M" value="3M" />
+                    <el-option label="6M" value="6M" /><el-option label="1Y" value="1Y" />
+                  </el-select>
+                  <el-select v-model="ndccs.recInterestType" size="small" style="flex:1;min-width:0">
+                    <el-option label="Simple Interest" value="simple" />
+                    <el-option label="Compound Interest" value="compound" />
+                  </el-select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 付息频率 + 计息基础 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ndccsPayFreq') }} <span class="req">*</span></div>
+              <div class="fs-cols fs-cols--2">
+                <div class="fc" style="gap:6px">
+                  <el-select v-model="ndccs.payPayFreq" size="small" style="flex:1;min-width:0">
+                    <el-option label="1M" value="1M" /><el-option label="3M" value="3M" />
+                    <el-option label="6M" value="6M" /><el-option label="1Y" value="1Y" />
+                  </el-select>
+                  <el-select v-model="ndccs.payDayCount" size="small" style="flex:1;min-width:0">
+                    <el-option label="ACT/360" value="ACT/360" /><el-option label="ACT/365" value="ACT/365" />
+                    <el-option label="30/360" value="30/360" /><el-option label="ACT/ACT" value="ACT/ACT" />
+                  </el-select>
+                </div>
+                <div class="fc" style="gap:6px">
+                  <el-select v-model="ndccs.recPayFreq" size="small" style="flex:1;min-width:0">
+                    <el-option label="1M" value="1M" /><el-option label="3M" value="3M" />
+                    <el-option label="6M" value="6M" /><el-option label="1Y" value="1Y" />
+                  </el-select>
+                  <el-select v-model="ndccs.recDayCount" size="small" style="flex:1;min-width:0">
+                    <el-option label="ACT/360" value="ACT/360" /><el-option label="ACT/365" value="ACT/365" />
+                    <el-option label="30/360" value="30/360" /><el-option label="ACT/ACT" value="ACT/ACT" />
+                  </el-select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 支付惯例 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ibPayConvention') }} <span class="req">*</span></div>
+              <div class="fs-cols fs-cols--2">
+                <div class="fc">
+                  <el-select v-model="ndccs.payPayConvention" size="small" style="width:100%">
+                    <el-option label="Modified Following" value="Modified Following" />
+                    <el-option label="Following"          value="Following" />
+                    <el-option label="Preceding"          value="Preceding" />
+                    <el-option label="Unadjusted"         value="Unadjusted" />
+                  </el-select>
+                </div>
+                <div class="fc">
+                  <el-select v-model="ndccs.recPayConvention" size="small" style="width:100%">
+                    <el-option label="Modified Following" value="Modified Following" />
+                    <el-option label="Following"          value="Following" />
+                    <el-option label="Preceding"          value="Preceding" />
+                    <el-option label="Unadjusted"         value="Unadjusted" />
+                  </el-select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 节假日 -->
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ibHolidayCalendar') }}</div>
+              <div class="fs-cols fs-cols--2">
+                <div class="fc">
+                  <el-select v-model="ndccs.payHolidayCalendar" multiple size="small" style="width:100%" :placeholder="t('te.selectPlaceholder')">
+                    <el-option v-for="c in CCY_LIST" :key="c" :label="c" :value="c" />
+                  </el-select>
+                </div>
+                <div class="fc">
+                  <el-select v-model="ndccs.recHolidayCalendar" multiple size="small" style="width:100%" :placeholder="t('te.selectPlaceholder')">
+                    <el-option v-for="c in CCY_LIST" :key="c" :label="c" :value="c" />
+                  </el-select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 日期调整 -->
+            <div class="fs-row fs-row--last">
+              <div class="fs-label">{{ t('te.ndccsDateAdjust') }}</div>
+              <div class="fs-cols fs-cols--2">
+                <div class="fc" style="gap:10px">
+                  <el-checkbox v-model="ndccs.payAdjusted">Adjusted</el-checkbox>
+                  <el-checkbox v-model="ndccs.payEOMA">EOMA</el-checkbox>
+                </div>
+                <div class="fc" style="gap:10px">
+                  <el-checkbox v-model="ndccs.recAdjusted">Adjusted</el-checkbox>
+                  <el-checkbox v-model="ndccs.recEOMA">EOMA</el-checkbox>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ③ 交易账户 -->
+          <div class="fs-card">
+            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secTradeAccount') }}</div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.account') }} <span class="req">*</span></div>
+              <div class="fs-cols fs-cols--acct">
+                <div class="fc"><el-input v-model="ndccs.account" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%" /></div>
+                <div class="fc fc--autofill">{{ t('te.autoFill') }}</div>
+              </div>
+            </div>
+            <div class="fs-row fs-row--last">
+              <div class="fs-label">{{ t('te.counterparty') }} <span class="req">*</span></div>
+              <div class="fs-cols fs-cols--acct">
+                <div class="fc"><el-input v-model="ndccs.counterparty" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%" /></div>
+                <div class="fc fc--autofill">{{ t('te.autoFill') }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ④ 备注 -->
+          <div class="fs-card">
+            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secRemarks') }}</div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.tradeNature') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-select v-model="ndccs.tradeNature" size="small" style="width:100%">
+                  <el-option :label="t('te.natureInterbank')"   value="interbank" />
+                  <el-option :label="t('te.natureProprietary')" value="proprietary" />
+                  <el-option :label="t('te.natureAgency')"      value="agency" />
+                </el-select>
+              </div>
+            </div>
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.externalNo') }}</div>
+              <div class="fs-cols fs-cols--profit">
+                <div class="fc"><el-input v-model="ndccs.externalNo" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" /></div>
+                <div class="fc">
+                  <el-select v-model="ndccs.externalSystem" size="small" style="width:100%">
+                    <el-option label="RCS" value="RCS" />
+                    <el-option label="EXT" value="EXT" />
+                  </el-select>
+                </div>
+              </div>
+            </div>
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.tradePurpose') }}</div>
+              <div class="fs-value"><el-input v-model="ndccs.purpose" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" /></div>
+            </div>
+            <div class="fs-row fs-row--last">
+              <div class="fs-label">{{ t('te.remarks') }}</div>
+              <div class="fs-value"><el-input v-model="ndccs.remark" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" /></div>
+            </div>
+          </div>
+
+          <!-- ⑤ 拓展字段 -->
+          <div class="fs-card">
+            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secExtFields') }}</div>
+            <div class="fs-row" v-for="(ext, idx) in ndccsExtFields" :key="ext.key"
+              :class="{ 'fs-row--last': idx === ndccsExtFields.length - 1 }">
+              <div class="fs-label">{{ ext.label }}</div>
+              <div class="fs-value">
+                <el-select v-model="ndccs[ext.key]" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%" clearable />
+              </div>
+            </div>
+          </div>
+
+        </template>
+
         <!-- ══ 其他产品占位 ══ -->
         <template v-else>
           <div class="placeholder-tip">
@@ -1160,8 +1476,11 @@
       </div>
     </div>
 
+    <!-- 右侧拖拽分隔条：调整分析面板宽度（组合交易时隐藏） -->
+    <div class="col-resizer" v-show="selectedProduct !== 'fx-avg-forward'" @mousedown="startResize('analysis', $event)"></div>
+
     <!-- ③ 右侧分析面板（组合交易时隐藏） -->
-    <div class="analysis-panel" v-show="selectedProduct !== 'fx-avg-forward'">
+    <div class="analysis-panel" v-show="selectedProduct !== 'fx-avg-forward'" :style="{ width: analysisWidth + 'px' }">
 
       <!-- 遍历各分析面板 -->
       <div
@@ -1364,6 +1683,51 @@ import {
 
 const { t } = useI18n()
 
+// ─── 三栏宽度可拖拽调整 ────────────────────────────────────────────────────────
+const TREE_MIN = 180, TREE_MAX = 420, TREE_DEFAULT = 220
+const ANALYSIS_MIN = 280, ANALYSIS_MAX = 640, ANALYSIS_DEFAULT = 420
+
+function loadColWidth(key, fallback) {
+  const v = parseInt(localStorage.getItem(key), 10)
+  return Number.isFinite(v) ? v : fallback
+}
+
+const treeWidth     = ref(loadColWidth('te.treeWidth', TREE_DEFAULT))
+const analysisWidth = ref(loadColWidth('te.analysisWidth', ANALYSIS_DEFAULT))
+
+let resizeState = null
+function startResize(panel, e) {
+  resizeState = {
+    panel,
+    startX:        e.clientX,
+    startTreeW:    treeWidth.value,
+    startAnalysisW: analysisWidth.value,
+  }
+  document.body.style.cursor    = 'col-resize'
+  document.body.style.userSelect = 'none'
+  window.addEventListener('mousemove', onResizeMove)
+  window.addEventListener('mouseup', stopResize)
+}
+function onResizeMove(e) {
+  if (!resizeState) return
+  const dx = e.clientX - resizeState.startX
+  if (resizeState.panel === 'tree') {
+    treeWidth.value = Math.min(TREE_MAX, Math.max(TREE_MIN, resizeState.startTreeW + dx))
+  } else {
+    analysisWidth.value = Math.min(ANALYSIS_MAX, Math.max(ANALYSIS_MIN, resizeState.startAnalysisW - dx))
+  }
+}
+function stopResize() {
+  if (!resizeState) return
+  localStorage.setItem('te.treeWidth', String(treeWidth.value))
+  localStorage.setItem('te.analysisWidth', String(analysisWidth.value))
+  resizeState = null
+  document.body.style.cursor    = ''
+  document.body.style.userSelect = ''
+  window.removeEventListener('mousemove', onResizeMove)
+  window.removeEventListener('mouseup', stopResize)
+}
+
 // ─── 左侧产品树 ───────────────────────────────────────────────────────────────
 const searchText     = ref('')
 const selectedProduct     = ref('fx-forward')
@@ -1389,6 +1753,7 @@ const productGroups = [
       },
       { key: 'ndf', label: 'NDF' },
       { key: 'ccs', label: 'Cross-Currency Swap' },
+      { key: 'ndccs', label: 'NDCCS' },
     ]
   },
   {
@@ -1585,6 +1950,8 @@ function handleClear() {
     cfIsAdding.value   = false
   } else if (selectedProduct.value === 'interbank') {
     Object.assign(ib, emptyIb())
+  } else if (selectedProduct.value === 'ndccs') {
+    Object.assign(ndccs, emptyNdccs())
   } else {
     Object.assign(fxFwd, emptyFxFwd())
   }
@@ -1703,6 +2070,95 @@ watch(ibOpenPrincipalCalc, (val) => {
 watch(() => ib.interestType, (val) => {
   if (val === 'discount') ib.openPrincipal = ibOpenPrincipalCalc.value
 })
+
+// ─── NDCCS / 无本金交割货币互换 ────────────────────────────────────────────────
+function emptyNdccs() {
+  return {
+    currencyPair:        '',
+    principalExchange:   'begin',
+    tradeDate:           today,
+    tradeTime:            nowTime,
+    valueDate:           '',
+    maturityDate:        '',
+    tenor:               '',
+
+    // Pay 端
+    payRateType:         'float',
+    payFloatIndex:       '',
+    payNotional:         '',
+    payInterestFreq:     '6M',
+    payInterestType:     'simple',
+    payPayFreq:          '6M',
+    payDayCount:         'ACT/360',
+    payPayConvention:    'Modified Following',
+    payHolidayCalendar:  [],
+    payAdjusted:         false,
+    payEOMA:             false,
+
+    // Rec 端
+    recRateType:         'float',
+    recFloatIndex:       '',
+    recNotional:         '',
+    recInterestFreq:     '6M',
+    recInterestType:     'simple',
+    recPayFreq:          '6M',
+    recDayCount:         'ACT/360',
+    recPayConvention:    'Modified Following',
+    recHolidayCalendar:  [],
+    recAdjusted:         false,
+    recEOMA:             false,
+
+    fxRate:              '',
+
+    account:             '',
+    counterparty:        '',
+
+    tradeNature:         'interbank',
+    externalNo:          '',
+    externalSystem:      'RCS',
+    purpose:             '',
+    remark:              '',
+
+    // 拓展字段：Pay / Rec 各 4 条结算路径
+    extPayOurRecv:       '',
+    extPayCounterPay:    '',
+    extPayOurPay:        '',
+    extPayCounterRecv:   '',
+    extRecOurRecv:       '',
+    extRecCounterPay:    '',
+    extRecOurPay:        '',
+    extRecCounterRecv:   '',
+  }
+}
+
+const ndccs = reactive(emptyNdccs())
+
+// 货币对变更时自动同步 Pay / Rec 两端货币展示（取货币对左右两侧）
+const ndccsPayCcy = computed(() => ndccs.currencyPair.includes('/') ? ndccs.currencyPair.split('/')[0] : '')
+const ndccsRecCcy = computed(() => ndccs.currencyPair.includes('/') ? ndccs.currencyPair.split('/')[1] : '')
+
+function calcNdccsTenor() {
+  if (ndccs.valueDate && ndccs.maturityDate) {
+    const d1   = new Date(ndccs.valueDate)
+    const d2   = new Date(ndccs.maturityDate)
+    const diff = Math.round((d2 - d1) / 86400000)
+    ndccs.tenor = diff >= 0 ? String(diff) : ''
+  } else {
+    ndccs.tenor = ''
+  }
+}
+
+// 拓展字段行定义：Pay 端 4 条 + Rec 端 4 条结算路径
+const ndccsExtFields = computed(() => [
+  { key: 'extPayOurRecv',     label: t('te.ourRecvSettlePath') },
+  { key: 'extPayCounterPay',  label: t('te.counterPaySettlePath') },
+  { key: 'extPayOurPay',      label: t('te.ourPaySettlePath') },
+  { key: 'extPayCounterRecv', label: t('te.counterRecvSettlePath') },
+  { key: 'extRecOurRecv',     label: t('te.ourRecvSettlePath') },
+  { key: 'extRecCounterPay',  label: t('te.counterPaySettlePath') },
+  { key: 'extRecOurPay',      label: t('te.ourPaySettlePath') },
+  { key: 'extRecCounterRecv', label: t('te.counterRecvSettlePath') },
+])
 
 const bondFmt8 = v => Number(v || 0).toFixed(8)
 
@@ -2140,19 +2596,34 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
 .trade-entry-page {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: 4fr 8fr 12fr;
-  grid-template-rows: minmax(0, 1fr);
-  gap: 8px;
+  display: flex;
+  align-items: stretch;
   padding: 12px;
   box-sizing: border-box;
   background: var(--git-bg);
   overflow: hidden;
+}
 
-  /* 组合交易：表单区铺满，analysis-panel 已通过 v-show 移出 grid */
-  &.is-combo {
-    grid-template-columns: 4fr 20fr;
+/* 三栏之间的可拖拽分隔条：v-show 隐藏时随面板一起消失，无需额外处理 is-combo */
+.col-resizer {
+  flex: 0 0 8px;
+  width: 8px;
+  align-self: stretch;
+  cursor: col-resize;
+  position: relative;
+  flex-shrink: 0;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 3px; height: 32px;
+    border-radius: 2px;
+    background: var(--git-border);
+    transform: translate(-50%, -50%);
+    transition: background 0.15s;
   }
+  &:hover::after { background: var(--git-primary); }
 }
 
 /* ═══════════════════════════════════════
@@ -2165,7 +2636,7 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-width: 0;
+  flex-shrink: 0;
   min-height: 0;
 
   .tree-header {
@@ -2273,9 +2744,10 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
 .form-panel {
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 360px;
   min-height: 0;
-  height: 100%;          /* 撑满 grid 行高，使 form-body 的 overflow-y 生效 */
+  height: 100%;          /* 撑满容器高度，使 form-body 的 overflow-y 生效 */
   box-sizing: border-box;
   background: #fff;
   border: 1px solid var(--git-border);
@@ -2713,9 +3185,9 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
 .analysis-panel {
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   gap: 5px;
   overflow-y: auto;
-  min-width: 0;
   min-height: 0;
 
   &::-webkit-scrollbar       { width: 4px; }
