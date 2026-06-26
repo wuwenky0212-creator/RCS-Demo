@@ -5,6 +5,7 @@ import TradeEntry from '@/views/trade-entry/TradeEntry.vue'
 import TransactionReview from '@/views/workbench/TransactionReview.vue'
 import TaxRuleConfig from '@/views/base-data/TaxRuleConfig.vue'
 import TradeQuery from '@/views/query/TradeQuery.vue'
+import ThresholdExceptionQuery from '@/views/query/ThresholdExceptionQuery.vue'
 import Placeholder from '@/views/Placeholder.vue'
 import InternalTransferError from '@/views/workbench/InternalTransferError.vue'
 import SuspenseAcct      from '@/views/workbench/SuspenseAcct.vue'
@@ -47,6 +48,7 @@ const routes = [
         meta: { title: '税务规则配置', group: '税务配置' }
       },
       { path: 'statistics', name: 'statistics', component: TradeQuery, meta: { title: '交易查询' } },
+      { path: 'threshold-exception', name: 'threshold-exception', component: ThresholdExceptionQuery, meta: { title: '阈值异常查询' } },
       { path: 'rules', name: 'rules', component: Placeholder, meta: { title: '规则管理' } },
       {
         path: 'pnl-attribution',

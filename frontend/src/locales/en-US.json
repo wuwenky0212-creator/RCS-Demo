@@ -564,7 +564,25 @@
     "groupStats": "Report Statistics",
     "maturityStats": "Maturity Trade Statistics",
     "taxReport": "Tax Summary Report",
-    "cashflowReport": "Cashflow Report"
+    "cashflowReport": "Cashflow Report",
+    "groupRecon": "Reconciliation",
+    "thresholdExceptionQuery": "Threshold Exception Query"
+  },
+  "thresholdException": {
+    "title": "Threshold Exception Query",
+    "externalNo": "External No.",
+    "postingDate": "Posting Date",
+    "excessAmount": "Excess Amount",
+    "currentAmount": "Current Posting Amount",
+    "previousAmount": "Previous Posting Amount",
+    "currency": "Currency",
+    "thresholdAmount": "Threshold Amount",
+    "export": "Export",
+    "emptyText": "No threshold exception records",
+    "querySuccess": "Query successful",
+    "exportSuccess": "Export successful",
+    "dateRequiredError": "Please select a posting date range",
+    "dateRangeInvalid": "Start date cannot be later than end date"
   },
   "pnlSidebar": {
     "title": "P&L Attribution",

@@ -57,6 +57,26 @@
         </div>
       </div>
 
+      <!-- 账务核对 -->
+      <div class="menu-group">
+        <div class="group-title">
+          <el-icon class="group-icon"><Warning /></el-icon>
+          <span>{{ t('querySidebar.groupRecon') }}</span>
+        </div>
+        <div class="group-items">
+          <router-link to="/threshold-exception" custom v-slot="{ navigate }">
+            <div
+              class="menu-item"
+              :class="{ active: isActive('/threshold-exception') }"
+              @click="navigate"
+            >
+              <span class="dot">●</span>
+              <span class="label">{{ t('querySidebar.thresholdExceptionQuery') }}</span>
+            </div>
+          </router-link>
+        </div>
+      </div>
+
     </div>
   </aside>
 </template>
@@ -64,7 +84,7 @@
 <script setup>
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { DataAnalysis, List, TrendCharts } from '@element-plus/icons-vue'
+import { DataAnalysis, List, TrendCharts, Warning } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const { t } = useI18n()

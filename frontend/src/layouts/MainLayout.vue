@@ -69,7 +69,7 @@ const { t } = useI18n()
 
 const showWorkbenchSidebar = computed(() => route.path.startsWith('/workbench'))
 const showBaseDataSidebar  = computed(() => route.path.startsWith('/base-data'))
-const showQuerySidebar     = computed(() => route.path.startsWith('/statistics'))
+const showQuerySidebar     = computed(() => route.path.startsWith('/statistics') || route.path.startsWith('/threshold-exception'))
 const showPositionSidebar  = computed(() => route.path.startsWith('/position'))
 const isTradeEntry         = computed(() => route.path.startsWith('/trade-entry'))
 

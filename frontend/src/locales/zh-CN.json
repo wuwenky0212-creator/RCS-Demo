@@ -564,7 +564,25 @@
     "groupStats": "报表统计",
     "maturityStats": "到期交易统计",
     "taxReport": "税务汇总报表",
-    "cashflowReport": "现金流报表"
+    "cashflowReport": "现金流报表",
+    "groupRecon": "账务核对",
+    "thresholdExceptionQuery": "阈值异常查询"
+  },
+  "thresholdException": {
+    "title": "阈值异常查询",
+    "externalNo": "交易流水号",
+    "postingDate": "入账日期",
+    "excessAmount": "超阈值金额",
+    "currentAmount": "本次入账金额",
+    "previousAmount": "上次入账金额",
+    "currency": "货币",
+    "thresholdAmount": "阈值金额",
+    "export": "导出",
+    "emptyText": "暂无超阈值异常记录",
+    "querySuccess": "查询成功",
+    "exportSuccess": "导出成功",
+    "dateRequiredError": "请选择入账日期范围",
+    "dateRangeInvalid": "开始日期不能晚于结束日期"
   },
   "baseDataSidebar": {
     "title": "基础数据",
