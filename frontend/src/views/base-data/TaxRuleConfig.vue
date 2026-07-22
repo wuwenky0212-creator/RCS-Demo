@@ -60,7 +60,14 @@
       style="width:100%"
       class="rule-table"
     >
-      <el-table-column prop="id" :label="t('taxRule.ruleId')" width="130" fixed />
+      <el-table-column
+        prop="id"
+        :label="t('taxRule.ruleId')"
+        width="130"
+        fixed
+        class-name="rule-id-column"
+        label-class-name="rule-id-column"
+      />
 
       <el-table-column :label="t('taxRule.isActive')" width="90" align="center">
         <template #default="{ row }">
@@ -72,6 +79,7 @@
       </el-table-column>
 
       <el-table-column prop="effectiveDate" :label="t('taxRule.effectiveDate')" width="110" />
+      <el-table-column prop="expiryDate" :label="t('taxRule.expiryDate')" width="110" />
       <el-table-column :label="t('taxRule.country')" width="100">
         <template #default="{ row }">{{ COUNTRY_MAP[row.country] || row.country }}</template>
       </el-table-column>
@@ -80,8 +88,22 @@
         <template #default="{ row }">{{ PRODUCT_MAP[row.productCategory] || row.productCategory }}</template>
       </el-table-column>
 
+      <el-table-column prop="portfolio" :label="t('taxRule.portfolio')" width="110">
+        <template #default="{ row }">{{ row.portfolio || '—' }}</template>
+      </el-table-column>
+
       <el-table-column :label="t('taxRule.bondCategory')" width="110">
         <template #default="{ row }">{{ row.bondCategory || '—' }}</template>
+      </el-table-column>
+
+      <el-table-column :label="t('taxRule.bondCode')" width="140">
+        <template #default="{ row }">{{ row.bondCode || '—' }}</template>
+      </el-table-column>
+
+      <el-table-column :label="t('taxRule.acquisitionPrice')" width="120" align="right">
+        <template #default="{ row }">
+          {{ row.acquisitionPrice == null ? '—' : row.acquisitionPrice.toFixed(4) }}
+        </template>
       </el-table-column>
 
       <el-table-column :label="t('taxRule.counterpartyTypes')" width="120">
@@ -92,18 +114,12 @@
         <template #default="{ row }">{{ row.taxRate.toFixed(4) }}</template>
       </el-table-column>
 
-      <el-table-column :label="t('taxRule.taxBase')" width="120">
-        <template #default="{ row }">{{ TAX_BASE_MAP[row.taxBase] || row.taxBase }}</template>
+      <el-table-column :label="t('taxRule.settlementHandling')" width="150">
+        <template #default="{ row }">{{ SETTLEMENT_HANDLING_MAP[row.settlementHandling] || row.settlementHandling }}</template>
       </el-table-column>
 
-      <el-table-column :label="t('taxRule.settlementImpact')" width="100">
-        <template #default="{ row }">{{ SETTLE_MAP[row.settlementImpact] || row.settlementImpact }}</template>
-      </el-table-column>
-
-      <el-table-column :label="t('taxRule.taxTiming')" min-width="130">
-        <template #default="{ row }">
-          {{ TAX_TIMING_BASE_MAP[row.taxTimingBase] || row.taxTimingBase }} T+{{ row.taxTimingOffset }}
-        </template>
+      <el-table-column :label="t('taxRule.accountingHandling')" width="120">
+        <template #default="{ row }">{{ ACCOUNTING_HANDLING_MAP[row.accountingHandling] || row.accountingHandling }}</template>
       </el-table-column>
 
       <el-table-column :label="t('common.actions')" width="160" fixed="right" align="center">
@@ -121,19 +137,20 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="620px"
+      width="480px"
+      class="tax-rule-dialog"
       destroy-on-close
     >
       <el-form
         ref="formRef"
         :model="form"
         :rules="formRules"
-        :label-width="locale === 'en-US' ? 'auto' : '110px'"
+        :label-width="locale === 'en-US' ? 'auto' : '130px'"
         :label-position="locale === 'en-US' ? 'top' : 'right'"
         size="default"
       >
-        <el-row :gutter="16">
-          <el-col :span="12">
+        <el-row>
+          <el-col :span="24">
             <el-form-item :label="t('taxRule.country')" prop="country">
               <el-select v-model="form.country" :placeholder="t('common.pleaseSelect')" style="width:100%">
                 <el-option :label="t('taxRule.countryID')" value="ID" />
@@ -141,17 +158,32 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="24">
             <el-form-item :label="t('taxRule.productCategory')" prop="productCategory">
-              <el-select v-model="form.productCategory" :placeholder="t('common.pleaseSelect')" style="width:100%">
+              <el-select
+                v-model="form.productCategory"
+                :placeholder="t('common.pleaseSelect')"
+                style="width:100%"
+                @change="handleProductCategoryChange"
+              >
                 <el-option :label="t('taxRule.productBond')" value="bond" />
                 <el-option :label="t('taxRule.productInterbank')" value="interbank" />
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('taxRule.bondCategory')">
-              <el-select v-model="form.bondCategory" :placeholder="t('taxRule.bondCategoryPlaceholder')" clearable style="width:100%">
+          <el-col v-if="form.productCategory === 'bond'" :span="24">
+            <el-form-item :label="t('taxRule.portfolio')" prop="portfolio">
+              <el-select v-model="form.portfolio" :placeholder="t('taxRule.optionalPlaceholder')" clearable filterable style="width:100%">
+                <el-option label="Portfolio A" value="Portfolio A" />
+                <el-option label="Portfolio B" value="Portfolio B" />
+                <el-option label="Portfolio C" value="Portfolio C" />
+                <el-option label="Portfolio D" value="Portfolio D" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col v-if="form.productCategory === 'bond'" :span="24">
+            <el-form-item :label="t('taxRule.bondCategory')" prop="bondCategory">
+              <el-select v-model="form.bondCategory" :placeholder="t('common.pleaseSelect')" style="width:100%">
                 <el-option :label="t('taxRule.bondGovt')"        value="国债" />
                 <el-option :label="t('taxRule.bondLocalGovt')"   value="地方政府债" />
                 <el-option :label="t('taxRule.bondPolicyBank')"  value="政策性金融债" />
@@ -161,7 +193,27 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col v-if="form.productCategory === 'bond'" :span="24">
+            <el-form-item :label="t('taxRule.bondCode')" prop="bondCode">
+              <el-select v-model="form.bondCode" :placeholder="t('taxRule.optionalPlaceholder')" clearable filterable style="width:100%">
+                <el-option label="019009.SH - 10Y Treasury 09" value="019009.SH" />
+                <el-option label="SHYMAL.IB" value="SHYMAL.IB" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col v-if="form.productCategory === 'bond'" :span="24">
+            <el-form-item :label="t('taxRule.acquisitionPrice')" prop="acquisitionPrice">
+              <el-input-number
+                v-model="form.acquisitionPrice"
+                :min="0.0001"
+                :precision="4"
+                :step="0.01"
+                controls-position="right"
+                style="width:100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
             <el-form-item :label="t('taxRule.counterpartyTypes')" prop="counterpartyTypes">
               <el-select v-model="form.counterpartyTypes" :placeholder="t('common.pleaseSelect')" multiple collapse-tags collapse-tags-tooltip style="width:100%">
                 <el-option :label="t('taxRule.cpDomesticBank')" value="domestic_bank" />
@@ -171,7 +223,7 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="24">
             <el-form-item :label="t('taxRule.taxRate')" prop="taxRate">
               <el-input-number
                 v-model="form.taxRate"
@@ -182,15 +234,7 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('taxRule.taxBase')" prop="taxBase">
-              <el-select v-model="form.taxBase" :placeholder="t('common.pleaseSelect')" style="width:100%">
-                <el-option :label="t('taxRule.taxBaseAccrued')"  value="accrued_interest" />
-                <el-option :label="t('taxRule.taxBaseCapitalGains')" value="capital_gains" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
+          <el-col :span="24">
             <el-form-item :label="t('taxRule.effectiveDate')" prop="effectiveDate">
               <el-date-picker
                 v-model="form.effectiveDate"
@@ -201,34 +245,35 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('taxRule.settlementImpact')" prop="settlementImpact">
-              <el-select v-model="form.settlementImpact" :placeholder="t('common.pleaseSelect')" style="width:100%">
-                <el-option :label="t('taxRule.settlementNet')"        value="net_deduct" />
-                <el-option :label="t('taxRule.settlementStandalone')" value="standalone" />
+          <el-col :span="24">
+            <el-form-item :label="t('taxRule.expiryDate')" prop="expiryDate">
+              <el-date-picker
+                v-model="form.expiryDate"
+                type="date"
+                :placeholder="t('common.pleaseSelect')"
+                value-format="YYYY-MM-DD"
+                :disabled-date="disableExpiryDate"
+                style="width:100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <el-form-item :label="t('taxRule.settlementHandling')" prop="settlementHandling">
+              <el-select v-model="form.settlementHandling" :placeholder="t('common.pleaseSelect')" style="width:100%">
+                <el-option :label="t('taxRule.settlementNoImpact')" value="no_impact" />
+                <el-option :label="t('taxRule.settlementImpact')" value="impact" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="24">
-            <el-form-item :label="t('taxRule.taxTiming')" prop="taxTimingBase" required>
-              <el-select v-model="form.taxTimingBase" :placeholder="t('taxRule.baseDay')" style="width:140px">
-                <el-option :label="t('taxRule.timingTradeDate')"    value="trade_date" />
-                <el-option :label="t('taxRule.timingValueDate')"    value="value_date" />
-                <el-option :label="t('taxRule.timingCouponDate')"   value="coupon_date" />
-                <el-option :label="t('taxRule.timingMaturityDate')" value="maturity_date" />
+            <el-form-item :label="t('taxRule.accountingHandling')" prop="accountingHandling">
+              <el-select v-model="form.accountingHandling" :placeholder="t('common.pleaseSelect')" style="width:100%">
+                <el-option :label="t('taxRule.accountingNoPosting')" value="no_posting" />
+                <el-option :label="t('taxRule.accountingPosting')" value="posting" />
               </el-select>
-              <span style="margin:0 8px;color:var(--git-text-2)">T +</span>
-              <el-input-number
-                v-model="form.taxTimingOffset"
-                :min="0"
-                :max="365"
-                :precision="0"
-                style="width:100px"
-              />
-              <span style="margin-left:6px;color:var(--git-text-3);font-size:12px">{{ t('common.days') }}</span>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="24">
             <el-form-item :label="t('taxRule.isActive')">
               <el-checkbox v-model="form.isActive">{{ t('taxRule.effectiveLabel') }}</el-checkbox>
             </el-form-item>
@@ -245,7 +290,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 
@@ -274,21 +319,14 @@ const CPTY_MAP = computed(() => ({
   central_bank: t('taxRule.cpCentralBank'),
   corporate: t('taxRule.cpCorporate'),
 }))
-const TAX_BASE_MAP = computed(() => ({
-  accrued_interest: t('taxRule.taxBaseAccrued'),
-  capital_gains: t('taxRule.taxBaseCapitalGains'),
+const SETTLEMENT_HANDLING_MAP = computed(() => ({
+  no_impact: t('taxRule.settlementNoImpact'),
+  impact: t('taxRule.settlementImpact'),
 }))
-const SETTLE_MAP = computed(() => ({
-  net_deduct: t('taxRule.settlementNet'),
-  standalone: t('taxRule.settlementStandalone'),
+const ACCOUNTING_HANDLING_MAP = computed(() => ({
+  no_posting: t('taxRule.accountingNoPosting'),
+  posting: t('taxRule.accountingPosting'),
 }))
-const TAX_TIMING_BASE_MAP = computed(() => ({
-  trade_date: t('taxRule.timingTradeDate'),
-  value_date: t('taxRule.timingValueDate'),
-  coupon_date: t('taxRule.timingCouponDate'),
-  maturity_date: t('taxRule.timingMaturityDate'),
-}))
-
 // ─── 筛选 ────────────────────────────────────────────────────────────────────
 const filter = reactive({
   country: '',
@@ -374,44 +412,90 @@ const dialogTitle = computed(() => ({
 const emptyForm = () => ({
   country: 'ID',
   productCategory: '',
+  portfolio: '',
   bondCategory: '',
+  bondCode: '',
+  acquisitionPrice: null,
   counterpartyTypes: [],
   direction: 'pay',
   taxRate: 0,
-  taxBase: '',
-  settlementImpact: 'net_deduct',
-  taxTimingBase: 'value_date',
-  taxTimingOffset: 0,
+  settlementHandling: '',
+  accountingHandling: '',
   effectiveDate: '',
+  expiryDate: '',
   isActive: true,
   sourceId: null,
 })
 
 const form = reactive(emptyForm())
 
+// 产品切换时带入标准默认值，用户仍可手工调整处理方式。
+function handleProductCategoryChange(productCategory) {
+  if (productCategory !== 'bond') {
+    form.portfolio = ''
+    form.bondCategory = ''
+    form.bondCode = ''
+    form.acquisitionPrice = null
+  }
+
+  if (productCategory === 'interbank') {
+    form.settlementHandling = 'impact'
+    form.accountingHandling = 'no_posting'
+  } else if (productCategory === 'bond') {
+    form.settlementHandling = 'no_impact'
+    form.accountingHandling = 'posting'
+  } else {
+    form.settlementHandling = ''
+    form.accountingHandling = ''
+  }
+}
+
+watch(() => form.effectiveDate, (effectiveDate) => {
+  if (effectiveDate && form.expiryDate && form.expiryDate < effectiveDate) {
+    form.expiryDate = ''
+  }
+})
+
+function disableExpiryDate(date) {
+  if (!form.effectiveDate) return false
+  const start = new Date(`${form.effectiveDate}T00:00:00`)
+  return date.getTime() < start.getTime()
+}
+
+function validateExpiryDate(_rule, value, callback) {
+  if (!value) return callback(new Error('请选择失效日期'))
+  if (form.effectiveDate && value < form.effectiveDate) {
+    return callback(new Error('失效日期不能早于生效日期'))
+  }
+  callback()
+}
+
 const formRules = {
   country:          [{ required: true, message: '请选择国家/地区' }],
   productCategory:  [{ required: true, message: '请选择产品类别' }],
-  counterpartyTypes: [{ required: true, type: 'array', min: 1, message: '请选择至少一个对手方类型' }],
+  bondCategory:     [{ required: true, message: '请选择债券分类' }],
+  acquisitionPrice: [{ required: true, message: '请输入购入价格' }],
   taxRate:          [{ required: true, message: '请输入税率' }],
-  taxBase:          [{ required: true, message: '请选择税基' }],
-  settlementImpact: [{ required: true, message: '请选择结算影响' }],
-  taxTimingBase:    [{ required: true, message: '请选择税费交收基准日' }],
+  settlementHandling: [{ required: true, message: '请选择结算处理方式' }],
+  accountingHandling: [{ required: true, message: '请选择记账处理方式' }],
   effectiveDate:    [{ required: true, message: '请选择生效日期' }],
+  expiryDate:       [{ required: true, validator: validateExpiryDate, trigger: 'change' }],
 }
 
 function fillForm(src) {
   Object.assign(form, {
     country:          src.country,
     productCategory:  src.productCategory,
+    portfolio:        src.portfolio || '',
     bondCategory:     src.bondCategory || '',
+    bondCode:         src.bondCode || '',
+    acquisitionPrice: src.acquisitionPrice ?? null,
     counterpartyTypes: Array.isArray(src.counterpartyTypes) ? [...src.counterpartyTypes] : (src.counterpartyType ? [src.counterpartyType] : []),
     taxRate:          src.taxRate,
-    taxBase:          src.taxBase,
-    settlementImpact: src.settlementImpact || 'net_deduct',
-    taxTimingBase:    src.taxTimingBase || 'value_date',
-    taxTimingOffset:  src.taxTimingOffset ?? 0,
+    settlementHandling: src.settlementHandling || (src.productCategory === 'interbank' ? 'impact' : 'no_impact'),
+    accountingHandling: src.accountingHandling || (src.productCategory === 'bond' ? 'posting' : 'no_posting'),
     effectiveDate:    src.effectiveDate,
+    expiryDate:       src.expiryDate,
     isActive:         src.isActive,
   })
 }
@@ -432,7 +516,8 @@ function openEdit(row) {
 
 function openCopy(row) {
   fillForm(row)
-  form.effectiveDate = ''    // 复制时清空生效日期，要求重新填写
+  form.effectiveDate = ''    // 复制时要求重新设置有效期
+  form.expiryDate = ''
   form.sourceId = row.id
   dialogMode.value = 'copy'
   editId.value = null
@@ -446,15 +531,17 @@ async function handleSave() {
     const payload = {
       country:          form.country,
       productCategory:  form.productCategory,
+      portfolio:        form.portfolio || null,
       bondCategory:     form.bondCategory || null,
+      bondCode:         form.bondCode || null,
+      acquisitionPrice: form.acquisitionPrice,
       counterpartyTypes: form.counterpartyTypes,
       direction:        'pay',
       taxRate:          form.taxRate,
-      taxBase:          form.taxBase,
-      settlementImpact: form.settlementImpact,
-      taxTimingBase:    form.taxTimingBase,
-      taxTimingOffset:  form.taxTimingOffset,
+      settlementHandling: form.settlementHandling,
+      accountingHandling: form.accountingHandling,
       effectiveDate:    form.effectiveDate,
+      expiryDate:       form.expiryDate,
       isActive:         form.isActive,
     }
     if (dialogMode.value === 'edit') {
@@ -545,6 +632,35 @@ async function handleSave() {
 
 :deep(.el-table .cell) {
   white-space: nowrap;
+}
+
+:deep(.rule-id-column .cell) {
+  padding-left: 18px;
+}
+
+:global(.tax-rule-dialog) {
+  max-width: calc(100vw - 32px);
+}
+
+:global(.tax-rule-dialog .el-dialog__header) {
+  padding: 14px 18px 10px;
+  margin-right: 0;
+}
+
+:global(.tax-rule-dialog .el-dialog__body) {
+  padding: 8px 18px 4px;
+}
+
+:global(.tax-rule-dialog .el-dialog__footer) {
+  padding: 8px 18px 14px;
+}
+
+:global(.tax-rule-dialog .el-form-item) {
+  margin-bottom: 10px;
+}
+
+:global(.tax-rule-dialog .el-form-item__label) {
+  padding-right: 12px;
 }
 
 </style>

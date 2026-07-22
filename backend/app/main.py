@@ -9,10 +9,10 @@ FastAPI 应用，为前端提供：
 """
 
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Literal, Optional
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .mock_data import (
     TRANSACTION_REVIEWS,
@@ -145,15 +145,18 @@ class TaxRuleItem(BaseModel):
     id: str
     isActive: bool
     effectiveDate: str
+    expiryDate: str
     country: str
     productCategory: str
-    counterpartyTypes: List[str]
+    portfolio: Optional[str] = None
+    bondCategory: Optional[str] = None
+    bondCode: Optional[str] = None
+    acquisitionPrice: Optional[float] = None
+    counterpartyTypes: List[str] = Field(default_factory=list)
     direction: str
     taxRate: float
-    taxBase: str
-    settlementImpact: str
-    taxTimingBase: str
-    taxTimingOffset: int
+    settlementHandling: Literal["no_impact", "impact"]
+    accountingHandling: Literal["no_posting", "posting"]
     createdBy: str
     createdAt: str
 
@@ -166,16 +169,31 @@ class TaxRuleList(BaseModel):
 class SaveTaxRulePayload(BaseModel):
     country: str
     productCategory: str
-    counterpartyTypes: List[str]
+    portfolio: Optional[str] = None
+    bondCategory: Optional[str] = None
+    bondCode: Optional[str] = None
+    acquisitionPrice: Optional[float] = None
+    counterpartyTypes: List[str] = Field(default_factory=list)
     direction: str = "pay"
     taxRate: float
-    taxBase: str
-    settlementImpact: str
-    taxTimingBase: str
-    taxTimingOffset: int = 0
+    settlementHandling: Literal["no_impact", "impact"]
+    accountingHandling: Literal["no_posting", "posting"]
     effectiveDate: str
+    expiryDate: str
     isActive: bool = True
     sourceId: Optional[str] = None   # 复制来源规则ID
+
+    @model_validator(mode="after")
+    def validate_validity_period(self):
+        if self.productCategory == "bond" and not self.bondCategory:
+            raise ValueError("债券产品必须选择债券分类")
+        if self.productCategory == "bond" and (
+            self.acquisitionPrice is None or self.acquisitionPrice <= 0
+        ):
+            raise ValueError("债券产品的购入价格必须大于 0")
+        if self.expiryDate < self.effectiveDate:
+            raise ValueError("失效日期不能早于生效日期")
+        return self
 
 
 def _rule_to_camel(r: dict) -> dict:
@@ -183,15 +201,18 @@ def _rule_to_camel(r: dict) -> dict:
         "id": r["id"],
         "isActive": r["is_active"],
         "effectiveDate": r["effective_date"],
+        "expiryDate": r["expiry_date"],
         "country": r["country"],
         "productCategory": r["product_category"],
+        "portfolio": r.get("portfolio"),
+        "bondCategory": r.get("bond_category"),
+        "bondCode": r.get("bond_code"),
+        "acquisitionPrice": r.get("acquisition_price"),
         "counterpartyTypes": r["counterparty_types"],
         "direction": r["direction"],
         "taxRate": r["tax_rate"],
-        "taxBase": r["tax_base"],
-        "settlementImpact": r["settlement_impact"],
-        "taxTimingBase": r["tax_timing_base"],
-        "taxTimingOffset": r["tax_timing_offset"],
+        "settlementHandling": r["settlement_handling"],
+        "accountingHandling": r["accounting_handling"],
         "createdBy": r["created_by"],
         "createdAt": r["created_at"],
     }
@@ -225,15 +246,18 @@ def create_tax_rule(payload: SaveTaxRulePayload):
         "id": _next_tax_rule_id(),
         "is_active": payload.isActive,
         "effective_date": payload.effectiveDate,
+        "expiry_date": payload.expiryDate,
         "country": payload.country,
         "product_category": payload.productCategory,
+        "portfolio": payload.portfolio if payload.productCategory == "bond" else None,
+        "bond_category": payload.bondCategory if payload.productCategory == "bond" else None,
+        "bond_code": payload.bondCode if payload.productCategory == "bond" else None,
+        "acquisition_price": payload.acquisitionPrice if payload.productCategory == "bond" else None,
         "counterparty_types": payload.counterpartyTypes,
         "direction": payload.direction,
         "tax_rate": payload.taxRate,
-        "tax_base": payload.taxBase,
-        "settlement_impact": payload.settlementImpact,
-        "tax_timing_base": payload.taxTimingBase,
-        "tax_timing_offset": payload.taxTimingOffset,
+        "settlement_handling": payload.settlementHandling,
+        "accounting_handling": payload.accountingHandling,
         "created_by": "current_user",
         "created_at": _date.today().isoformat(),
     }
@@ -247,15 +271,18 @@ def update_tax_rule(rule_id: str, payload: SaveTaxRulePayload):
         if r["id"] == rule_id:
             r["is_active"] = payload.isActive
             r["effective_date"] = payload.effectiveDate
+            r["expiry_date"] = payload.expiryDate
             r["country"] = payload.country
             r["product_category"] = payload.productCategory
+            r["portfolio"] = payload.portfolio if payload.productCategory == "bond" else None
+            r["bond_category"] = payload.bondCategory if payload.productCategory == "bond" else None
+            r["bond_code"] = payload.bondCode if payload.productCategory == "bond" else None
+            r["acquisition_price"] = payload.acquisitionPrice if payload.productCategory == "bond" else None
             r["counterparty_types"] = payload.counterpartyTypes
             r["direction"] = payload.direction
             r["tax_rate"] = payload.taxRate
-            r["tax_base"] = payload.taxBase
-            r["settlement_impact"] = payload.settlementImpact
-            r["tax_timing_base"] = payload.taxTimingBase
-            r["tax_timing_offset"] = payload.taxTimingOffset
+            r["settlement_handling"] = payload.settlementHandling
+            r["accounting_handling"] = payload.accountingHandling
             return _rule_to_camel(r)
     from fastapi import HTTPException
     raise HTTPException(status_code=404, detail="规则不存在")
