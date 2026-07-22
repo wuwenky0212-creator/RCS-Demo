@@ -148,9 +148,9 @@ class TaxRuleItem(BaseModel):
     expiryDate: str
     country: str
     productCategory: str
-    portfolio: Optional[str] = None
     bondCategory: Optional[str] = None
     bondCode: Optional[str] = None
+    relatedTransactionId: Optional[str] = None
     acquisitionPrice: Optional[float] = None
     counterpartyTypes: List[str] = Field(default_factory=list)
     direction: str
@@ -169,9 +169,9 @@ class TaxRuleList(BaseModel):
 class SaveTaxRulePayload(BaseModel):
     country: str
     productCategory: str
-    portfolio: Optional[str] = None
     bondCategory: Optional[str] = None
     bondCode: Optional[str] = None
+    relatedTransactionId: Optional[str] = None
     acquisitionPrice: Optional[float] = None
     counterpartyTypes: List[str] = Field(default_factory=list)
     direction: str = "pay"
@@ -185,8 +185,8 @@ class SaveTaxRulePayload(BaseModel):
 
     @model_validator(mode="after")
     def validate_validity_period(self):
-        if self.productCategory == "bond" and not self.bondCategory:
-            raise ValueError("债券产品必须选择债券分类")
+        if self.productCategory == "bond" and not self.relatedTransactionId:
+            raise ValueError("债券产品必须填写关联交易流水号")
         if self.productCategory == "bond" and (
             self.acquisitionPrice is None or self.acquisitionPrice <= 0
         ):
@@ -204,9 +204,9 @@ def _rule_to_camel(r: dict) -> dict:
         "expiryDate": r["expiry_date"],
         "country": r["country"],
         "productCategory": r["product_category"],
-        "portfolio": r.get("portfolio"),
         "bondCategory": r.get("bond_category"),
         "bondCode": r.get("bond_code"),
+        "relatedTransactionId": r.get("related_transaction_id"),
         "acquisitionPrice": r.get("acquisition_price"),
         "counterpartyTypes": r["counterparty_types"],
         "direction": r["direction"],
@@ -249,9 +249,9 @@ def create_tax_rule(payload: SaveTaxRulePayload):
         "expiry_date": payload.expiryDate,
         "country": payload.country,
         "product_category": payload.productCategory,
-        "portfolio": payload.portfolio if payload.productCategory == "bond" else None,
         "bond_category": payload.bondCategory if payload.productCategory == "bond" else None,
         "bond_code": payload.bondCode if payload.productCategory == "bond" else None,
+        "related_transaction_id": payload.relatedTransactionId if payload.productCategory == "bond" else None,
         "acquisition_price": payload.acquisitionPrice if payload.productCategory == "bond" else None,
         "counterparty_types": payload.counterpartyTypes,
         "direction": payload.direction,
@@ -274,9 +274,9 @@ def update_tax_rule(rule_id: str, payload: SaveTaxRulePayload):
             r["expiry_date"] = payload.expiryDate
             r["country"] = payload.country
             r["product_category"] = payload.productCategory
-            r["portfolio"] = payload.portfolio if payload.productCategory == "bond" else None
             r["bond_category"] = payload.bondCategory if payload.productCategory == "bond" else None
             r["bond_code"] = payload.bondCode if payload.productCategory == "bond" else None
+            r["related_transaction_id"] = payload.relatedTransactionId if payload.productCategory == "bond" else None
             r["acquisition_price"] = payload.acquisitionPrice if payload.productCategory == "bond" else None
             r["counterparty_types"] = payload.counterpartyTypes
             r["direction"] = payload.direction

@@ -88,16 +88,16 @@
         <template #default="{ row }">{{ PRODUCT_MAP[row.productCategory] || row.productCategory }}</template>
       </el-table-column>
 
-      <el-table-column prop="portfolio" :label="t('taxRule.portfolio')" width="110">
-        <template #default="{ row }">{{ row.portfolio || '—' }}</template>
-      </el-table-column>
-
       <el-table-column :label="t('taxRule.bondCategory')" width="110">
         <template #default="{ row }">{{ row.bondCategory || '—' }}</template>
       </el-table-column>
 
       <el-table-column :label="t('taxRule.bondCode')" width="140">
         <template #default="{ row }">{{ row.bondCode || '—' }}</template>
+      </el-table-column>
+
+      <el-table-column :label="t('taxRule.relatedTransactionId')" width="160">
+        <template #default="{ row }">{{ row.relatedTransactionId || '—' }}</template>
       </el-table-column>
 
       <el-table-column :label="t('taxRule.acquisitionPrice')" width="120" align="right">
@@ -122,7 +122,14 @@
         <template #default="{ row }">{{ ACCOUNTING_HANDLING_MAP[row.accountingHandling] || row.accountingHandling }}</template>
       </el-table-column>
 
-      <el-table-column :label="t('common.actions')" width="160" fixed="right" align="center">
+      <el-table-column
+        :label="t('common.actions')"
+        width="160"
+        fixed="right"
+        align="center"
+        class-name="operation-column"
+        label-class-name="operation-column"
+      >
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click="openEdit(row)">{{ t('common.edit') }}</el-button>
           <el-divider direction="vertical" />
@@ -172,18 +179,8 @@
             </el-form-item>
           </el-col>
           <el-col v-if="form.productCategory === 'bond'" :span="24">
-            <el-form-item :label="t('taxRule.portfolio')" prop="portfolio">
-              <el-select v-model="form.portfolio" :placeholder="t('taxRule.optionalPlaceholder')" clearable filterable style="width:100%">
-                <el-option label="Portfolio A" value="Portfolio A" />
-                <el-option label="Portfolio B" value="Portfolio B" />
-                <el-option label="Portfolio C" value="Portfolio C" />
-                <el-option label="Portfolio D" value="Portfolio D" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col v-if="form.productCategory === 'bond'" :span="24">
             <el-form-item :label="t('taxRule.bondCategory')" prop="bondCategory">
-              <el-select v-model="form.bondCategory" :placeholder="t('common.pleaseSelect')" style="width:100%">
+              <el-select v-model="form.bondCategory" :placeholder="t('taxRule.optionalPlaceholder')" clearable style="width:100%">
                 <el-option :label="t('taxRule.bondGovt')"        value="国债" />
                 <el-option :label="t('taxRule.bondLocalGovt')"   value="地方政府债" />
                 <el-option :label="t('taxRule.bondPolicyBank')"  value="政策性金融债" />
@@ -199,6 +196,15 @@
                 <el-option label="019009.SH - 10Y Treasury 09" value="019009.SH" />
                 <el-option label="SHYMAL.IB" value="SHYMAL.IB" />
               </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col v-if="form.productCategory === 'bond'" :span="24">
+            <el-form-item :label="t('taxRule.relatedTransactionId')" prop="relatedTransactionId">
+              <el-input
+                v-model="form.relatedTransactionId"
+                :placeholder="t('taxRule.relatedTransactionIdPlaceholder')"
+                clearable
+              />
             </el-form-item>
           </el-col>
           <el-col v-if="form.productCategory === 'bond'" :span="24">
@@ -412,9 +418,9 @@ const dialogTitle = computed(() => ({
 const emptyForm = () => ({
   country: 'ID',
   productCategory: '',
-  portfolio: '',
   bondCategory: '',
   bondCode: '',
+  relatedTransactionId: '',
   acquisitionPrice: null,
   counterpartyTypes: [],
   direction: 'pay',
@@ -432,9 +438,9 @@ const form = reactive(emptyForm())
 // 产品切换时带入标准默认值，用户仍可手工调整处理方式。
 function handleProductCategoryChange(productCategory) {
   if (productCategory !== 'bond') {
-    form.portfolio = ''
     form.bondCategory = ''
     form.bondCode = ''
+    form.relatedTransactionId = ''
     form.acquisitionPrice = null
   }
 
@@ -473,7 +479,7 @@ function validateExpiryDate(_rule, value, callback) {
 const formRules = {
   country:          [{ required: true, message: '请选择国家/地区' }],
   productCategory:  [{ required: true, message: '请选择产品类别' }],
-  bondCategory:     [{ required: true, message: '请选择债券分类' }],
+  relatedTransactionId: [{ required: true, message: '请输入关联交易流水号' }],
   acquisitionPrice: [{ required: true, message: '请输入购入价格' }],
   taxRate:          [{ required: true, message: '请输入税率' }],
   settlementHandling: [{ required: true, message: '请选择结算处理方式' }],
@@ -486,9 +492,9 @@ function fillForm(src) {
   Object.assign(form, {
     country:          src.country,
     productCategory:  src.productCategory,
-    portfolio:        src.portfolio || '',
     bondCategory:     src.bondCategory || '',
     bondCode:         src.bondCode || '',
+    relatedTransactionId: src.relatedTransactionId || '',
     acquisitionPrice: src.acquisitionPrice ?? null,
     counterpartyTypes: Array.isArray(src.counterpartyTypes) ? [...src.counterpartyTypes] : (src.counterpartyType ? [src.counterpartyType] : []),
     taxRate:          src.taxRate,
@@ -531,9 +537,9 @@ async function handleSave() {
     const payload = {
       country:          form.country,
       productCategory:  form.productCategory,
-      portfolio:        form.portfolio || null,
       bondCategory:     form.bondCategory || null,
       bondCode:         form.bondCode || null,
+      relatedTransactionId: form.relatedTransactionId || null,
       acquisitionPrice: form.acquisitionPrice,
       counterpartyTypes: form.counterpartyTypes,
       direction:        'pay',
@@ -636,6 +642,16 @@ async function handleSave() {
 
 :deep(.rule-id-column .cell) {
   padding-left: 18px;
+}
+
+/* 操作列始终紧贴表格右侧，不随横向滚动偏移 */
+:deep(.el-table-fixed-column--right.operation-column) {
+  right: 0 !important;
+  z-index: 4;
+}
+
+:deep(.el-table__fixed-right) {
+  right: 0 !important;
 }
 
 :global(.tax-rule-dialog) {
