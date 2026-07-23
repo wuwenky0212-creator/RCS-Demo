@@ -1,5 +1,10 @@
 <template>
   <div class="tax-rule-config">
+    <el-tabs v-model="activeProduct" class="product-tabs" @tab-change="handleTabChange">
+      <el-tab-pane :label="t('taxRule.bondRulesTab')" name="bond" />
+      <el-tab-pane :label="t('taxRule.interbankRulesTab')" name="interbank" />
+    </el-tabs>
+
     <!-- 筛选区 -->
     <div class="filter-bar">
       <div class="filter-fields">
@@ -11,15 +16,31 @@
           </el-select>
         </div>
 
-        <div class="filter-item">
-          <label class="filter-label">{{ t('taxRule.productCategory') }}</label>
-          <el-select v-model="filter.productCategory" :placeholder="t('common.pleaseSelect')" clearable size="default" style="width:130px">
-            <el-option :label="t('taxRule.productBond')" value="bond" />
-            <el-option :label="t('taxRule.productInterbank')" value="interbank" />
+        <div v-if="activeProduct === 'bond'" class="filter-item">
+          <label class="filter-label">{{ t('taxRule.relatedTransactionId') }}</label>
+          <el-input
+            v-model="filter.relatedTransactionId"
+            :placeholder="t('taxRule.relatedTransactionIdPlaceholder')"
+            clearable
+            style="width:190px"
+          />
+        </div>
+
+        <div v-if="activeProduct === 'bond'" class="filter-item">
+          <label class="filter-label">{{ t('taxRule.bondCode') }}</label>
+          <el-select
+            v-model="filter.bondCode"
+            :placeholder="t('common.pleaseSelect')"
+            clearable
+            filterable
+            style="width:170px"
+          >
+            <el-option label="019009.SH - 10Y Treasury 09" value="019009.SH" />
+            <el-option label="SHYMAL.IB" value="SHYMAL.IB" />
           </el-select>
         </div>
 
-        <div class="filter-item">
+        <div v-if="activeProduct === 'interbank'" class="filter-item">
           <label class="filter-label">{{ t('taxRule.counterpartyTypes') }}</label>
           <el-select
             v-model="filter.counterpartyTypes"
@@ -46,7 +67,16 @@
       <div class="filter-actions">
         <el-button type="primary" :icon="Search" size="default" @click="loadData">{{ t('common.query') }}</el-button>
         <el-button :icon="Refresh" size="default" @click="resetFilter">{{ t('common.reset') }}</el-button>
+        <el-button :icon="Upload" size="default" @click="triggerImport">{{ t('taxRule.importBtn') }}</el-button>
+        <el-button :icon="Download" size="default" @click="handleExport">{{ t('taxRule.exportBtn') }}</el-button>
         <el-button type="primary" :icon="Plus" size="default" @click="openCreate" class="btn-add">{{ t('taxRule.addBtn') }}</el-button>
+        <input
+          ref="importFileInput"
+          type="file"
+          accept=".xlsx,.xls"
+          hidden
+          @change="handleImport"
+        >
       </div>
     </div>
 
@@ -84,29 +114,21 @@
         <template #default="{ row }">{{ COUNTRY_MAP[row.country] || row.country }}</template>
       </el-table-column>
 
-      <el-table-column :label="t('taxRule.productCategory')" width="110">
-        <template #default="{ row }">{{ PRODUCT_MAP[row.productCategory] || row.productCategory }}</template>
-      </el-table-column>
-
-      <el-table-column :label="t('taxRule.bondCategory')" width="110">
-        <template #default="{ row }">{{ row.bondCategory || '—' }}</template>
-      </el-table-column>
-
-      <el-table-column :label="t('taxRule.bondCode')" width="140">
+      <el-table-column v-if="activeProduct === 'bond'" :label="t('taxRule.bondCode')" width="140">
         <template #default="{ row }">{{ row.bondCode || '—' }}</template>
       </el-table-column>
 
-      <el-table-column :label="t('taxRule.relatedTransactionId')" width="160">
+      <el-table-column v-if="activeProduct === 'bond'" :label="t('taxRule.relatedTransactionId')" width="160">
         <template #default="{ row }">{{ row.relatedTransactionId || '—' }}</template>
       </el-table-column>
 
-      <el-table-column :label="t('taxRule.acquisitionPrice')" width="120" align="right">
+      <el-table-column v-if="activeProduct === 'bond'" :label="t('taxRule.acquisitionPrice')" width="120" align="right">
         <template #default="{ row }">
           {{ row.acquisitionPrice == null ? '—' : row.acquisitionPrice.toFixed(4) }}
         </template>
       </el-table-column>
 
-      <el-table-column :label="t('taxRule.counterpartyTypes')" width="120">
+      <el-table-column v-if="activeProduct === 'interbank'" :label="t('taxRule.counterpartyTypes')" width="120">
         <template #default="{ row }">{{ (row.counterpartyTypes || []).map(ct => CPTY_MAP[ct] || ct).join(', ') }}</template>
       </el-table-column>
 
@@ -171,22 +193,10 @@
                 v-model="form.productCategory"
                 :placeholder="t('common.pleaseSelect')"
                 style="width:100%"
-                @change="handleProductCategoryChange"
+                disabled
               >
                 <el-option :label="t('taxRule.productBond')" value="bond" />
                 <el-option :label="t('taxRule.productInterbank')" value="interbank" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col v-if="form.productCategory === 'bond'" :span="24">
-            <el-form-item :label="t('taxRule.bondCategory')" prop="bondCategory">
-              <el-select v-model="form.bondCategory" :placeholder="t('taxRule.optionalPlaceholder')" clearable style="width:100%">
-                <el-option :label="t('taxRule.bondGovt')"        value="国债" />
-                <el-option :label="t('taxRule.bondLocalGovt')"   value="地方政府债" />
-                <el-option :label="t('taxRule.bondPolicyBank')"  value="政策性金融债" />
-                <el-option :label="t('taxRule.bondCommercial')"  value="商业银行债" />
-                <el-option :label="t('taxRule.bondCorp')"        value="企业债" />
-                <el-option :label="t('taxRule.bondConvertible')" value="可转债" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -219,7 +229,7 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="24">
+          <el-col v-if="form.productCategory === 'interbank'" :span="24">
             <el-form-item :label="t('taxRule.counterpartyTypes')" prop="counterpartyTypes">
               <el-select v-model="form.counterpartyTypes" :placeholder="t('common.pleaseSelect')" multiple collapse-tags collapse-tags-tooltip style="width:100%">
                 <el-option :label="t('taxRule.cpDomesticBank')" value="domestic_bank" />
@@ -265,7 +275,7 @@
           </el-col>
           <el-col :span="24">
             <el-form-item :label="t('taxRule.settlementHandling')" prop="settlementHandling">
-              <el-select v-model="form.settlementHandling" :placeholder="t('common.pleaseSelect')" style="width:100%">
+              <el-select v-model="form.settlementHandling" :placeholder="t('common.pleaseSelect')" disabled style="width:100%">
                 <el-option :label="t('taxRule.settlementNoImpact')" value="no_impact" />
                 <el-option :label="t('taxRule.settlementImpact')" value="impact" />
               </el-select>
@@ -273,7 +283,7 @@
           </el-col>
           <el-col :span="24">
             <el-form-item :label="t('taxRule.accountingHandling')" prop="accountingHandling">
-              <el-select v-model="form.accountingHandling" :placeholder="t('common.pleaseSelect')" style="width:100%">
+              <el-select v-model="form.accountingHandling" :placeholder="t('common.pleaseSelect')" disabled style="width:100%">
                 <el-option :label="t('taxRule.accountingNoPosting')" value="no_posting" />
                 <el-option :label="t('taxRule.accountingPosting')" value="posting" />
               </el-select>
@@ -298,7 +308,8 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Search, Refresh, Plus } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, Upload, Download } from '@element-plus/icons-vue'
+import * as XLSX from 'xlsx'
 
 const { t, locale } = useI18n()
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -315,10 +326,6 @@ const COUNTRY_MAP = computed(() => ({
   ID: t('taxRule.countryID'),
   CN: t('taxRule.countryCN'),
 }))
-const PRODUCT_MAP = computed(() => ({
-  bond: t('taxRule.productBond'),
-  interbank: t('taxRule.productInterbank'),
-}))
 const CPTY_MAP = computed(() => ({
   domestic_bank: t('taxRule.cpDomesticBank'),
   foreign_fi: t('taxRule.cpForeignFI'),
@@ -334,9 +341,12 @@ const ACCOUNTING_HANDLING_MAP = computed(() => ({
   posting: t('taxRule.accountingPosting'),
 }))
 // ─── 筛选 ────────────────────────────────────────────────────────────────────
+const activeProduct = ref('bond')
+
 const filter = reactive({
   country: '',
-  productCategory: '',
+  relatedTransactionId: '',
+  bondCode: '',
   counterpartyTypes: [],
   isActive: '',
 })
@@ -344,10 +354,19 @@ const filter = reactive({
 function resetFilter() {
   Object.assign(filter, {
     country: '',
-    productCategory: '',
+    relatedTransactionId: '',
+    bondCode: '',
     counterpartyTypes: [],
     isActive: '',
   })
+  loadData()
+}
+
+function handleTabChange() {
+  dialogVisible.value = false
+  filter.relatedTransactionId = ''
+  filter.bondCode = ''
+  filter.counterpartyTypes = []
   loadData()
 }
 
@@ -360,8 +379,16 @@ async function loadData() {
   try {
     const params = {}
     if (filter.country)                    params.country = filter.country
-    if (filter.productCategory)            params.productCategory = filter.productCategory
-    if (filter.counterpartyTypes.length)   params.counterpartyTypes = filter.counterpartyTypes.join(',')
+    params.productCategory = activeProduct.value
+    if (activeProduct.value === 'bond' && filter.relatedTransactionId) {
+      params.relatedTransactionId = filter.relatedTransactionId.trim()
+    }
+    if (activeProduct.value === 'bond' && filter.bondCode) {
+      params.bondCode = filter.bondCode
+    }
+    if (activeProduct.value === 'interbank' && filter.counterpartyTypes.length) {
+      params.counterpartyTypes = filter.counterpartyTypes.join(',')
+    }
     if (filter.isActive)                   params.isActive = filter.isActive
 
     const res = await listTaxRules(params)
@@ -374,6 +401,192 @@ async function loadData() {
 }
 
 onMounted(loadData)
+
+// ─── Excel 导入 / 导出 ───────────────────────────────────────────────────────
+const importFileInput = ref(null)
+
+function triggerImport() {
+  importFileInput.value?.click()
+}
+
+function exportHeaders() {
+  const commonHeaders = [
+    t('taxRule.country'),
+    t('taxRule.taxRate'),
+    t('taxRule.effectiveDate'),
+    t('taxRule.expiryDate'),
+    t('taxRule.isActive'),
+    t('taxRule.settlementHandling'),
+    t('taxRule.accountingHandling'),
+  ]
+  return activeProduct.value === 'bond'
+    ? [
+        t('taxRule.ruleId'),
+        ...commonHeaders.slice(0, 1),
+        t('taxRule.bondCode'),
+        t('taxRule.relatedTransactionId'),
+        t('taxRule.acquisitionPrice'),
+        ...commonHeaders.slice(1),
+      ]
+    : [
+        t('taxRule.ruleId'),
+        ...commonHeaders.slice(0, 1),
+        t('taxRule.counterpartyTypes'),
+        ...commonHeaders.slice(1),
+      ]
+}
+
+function exportRow(row) {
+  const commonValues = [
+    row.country,
+    row.taxRate,
+    row.effectiveDate,
+    row.expiryDate,
+    row.isActive ? 'true' : 'false',
+    row.settlementHandling,
+    row.accountingHandling,
+  ]
+  return activeProduct.value === 'bond'
+    ? [
+        row.id,
+        ...commonValues.slice(0, 1),
+        row.bondCode || '',
+        row.relatedTransactionId || '',
+        row.acquisitionPrice ?? '',
+        ...commonValues.slice(1),
+      ]
+    : [
+        row.id,
+        ...commonValues.slice(0, 1),
+        (row.counterpartyTypes || []).join(','),
+        ...commonValues.slice(1),
+      ]
+}
+
+function handleExport() {
+  const sheet = XLSX.utils.aoa_to_sheet([
+    exportHeaders(),
+    ...tableData.value.map(exportRow),
+  ])
+  sheet['!cols'] = exportHeaders().map(header => ({
+    wch: Math.max(14, String(header).length * 2),
+  }))
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(
+    workbook,
+    sheet,
+    activeProduct.value === 'bond' ? 'Bond Tax Rules' : 'Interbank Tax Rules',
+  )
+  const date = new Date().toISOString().slice(0, 10)
+  XLSX.writeFile(
+    workbook,
+    `${activeProduct.value === 'bond' ? '债券' : '拆借'}税费规则_${date}.xlsx`,
+  )
+  ElMessage.success(t('taxRule.exportSuccess'))
+}
+
+function readImportValue(row, ...keys) {
+  for (const key of keys) {
+    if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key]
+  }
+  return ''
+}
+
+function normalizeDate(value) {
+  if (typeof value === 'number') return XLSX.SSF.format('yyyy-mm-dd', value)
+  const text = String(value || '').trim().replace(/\//g, '-')
+  const match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+  if (!match) return text
+  return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`
+}
+
+function normalizeActive(value) {
+  const text = String(value ?? '').trim().toLowerCase()
+  return !['false', '0', '否', '未生效', 'inactive'].includes(text)
+}
+
+function parseImportRow(row, index) {
+  const country = String(readImportValue(row, '国家/地区', 'Country / Region', 'country')).trim()
+  const taxRateRaw = readImportValue(row, '税率(%)', 'Tax Rate (%)', 'taxRate')
+  const effectiveDate = normalizeDate(
+    readImportValue(row, '生效日期', 'Effective Date', 'effectiveDate') || getSystemDate(),
+  )
+  const expiryDate = normalizeDate(
+    readImportValue(row, '失效日期', 'Expiry Date', 'expiryDate') || '2099-12-30',
+  )
+
+  const required = [
+    [country, t('taxRule.country')],
+    [taxRateRaw !== '', t('taxRule.taxRate')],
+    [effectiveDate, t('taxRule.effectiveDate')],
+    [expiryDate, t('taxRule.expiryDate')],
+  ]
+
+  const payload = {
+    country,
+    productCategory: activeProduct.value,
+    bondCategory: null,
+    bondCode: null,
+    relatedTransactionId: null,
+    acquisitionPrice: null,
+    counterpartyTypes: [],
+    direction: 'pay',
+    taxRate: Number(taxRateRaw),
+    settlementHandling: 'impact',
+    accountingHandling: activeProduct.value === 'bond' ? 'posting' : 'no_posting',
+    effectiveDate,
+    expiryDate,
+    isActive: normalizeActive(readImportValue(row, '是否生效', 'Active', 'isActive')),
+  }
+
+  if (activeProduct.value === 'bond') {
+    payload.bondCode = String(readImportValue(row, '债券代码', 'Bond Code', 'bondCode')).trim() || null
+    payload.relatedTransactionId = String(
+      readImportValue(row, '关联交易流水号', 'Related Transaction ID', 'relatedTransactionId'),
+    ).trim()
+    const price = readImportValue(row, '购入价格', 'Acquisition Price', 'acquisitionPrice')
+    payload.acquisitionPrice = Number(price)
+    required.push(
+      [payload.relatedTransactionId, t('taxRule.relatedTransactionId')],
+      [price !== '' && Number(price) > 0, t('taxRule.acquisitionPrice')],
+    )
+  } else {
+    const counterparties = String(
+      readImportValue(row, '交易对手分类', 'Counterparty Type', 'counterpartyTypes'),
+    ).trim()
+    payload.counterpartyTypes = counterparties
+      ? counterparties.split(/[,，;]/).map(item => item.trim()).filter(Boolean)
+      : []
+  }
+
+  const invalid = required.find(([valid]) => !valid)
+  if (invalid || Number.isNaN(payload.taxRate)) {
+    const field = invalid?.[1] || t('taxRule.taxRate')
+    throw new Error(t('taxRule.importInvalid', { row: index + 2, field }))
+  }
+  return payload
+}
+
+async function handleImport(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+
+  try {
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]]
+    const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: true })
+    if (!rows.length) throw new Error(t('taxRule.importEmpty'))
+
+    const payloads = rows.map(parseImportRow)
+    for (const payload of payloads) await createTaxRule(payload)
+
+    ElMessage.success(t('taxRule.importSuccess', { count: payloads.length }))
+    await loadData()
+  } catch (error) {
+    ElMessage.error(error?.message || t('taxRule.importEmpty'))
+  }
+}
 
 // ─── 是否生效切换 ─────────────────────────────────────────────────────────────
 async function handleToggle(row) {
@@ -415,46 +628,32 @@ const dialogTitle = computed(() => ({
   copy: t('taxRule.dialogCopy'),
 }[dialogMode.value]))
 
+function getSystemDate() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 const emptyForm = () => ({
   country: 'ID',
-  productCategory: '',
-  bondCategory: '',
+  productCategory: activeProduct.value,
   bondCode: '',
   relatedTransactionId: '',
   acquisitionPrice: null,
   counterpartyTypes: [],
   direction: 'pay',
   taxRate: 0,
-  settlementHandling: '',
-  accountingHandling: '',
-  effectiveDate: '',
-  expiryDate: '',
+  settlementHandling: 'impact',
+  accountingHandling: activeProduct.value === 'interbank' ? 'no_posting' : 'posting',
+  effectiveDate: getSystemDate(),
+  expiryDate: '2099-12-30',
   isActive: true,
   sourceId: null,
 })
 
 const form = reactive(emptyForm())
-
-// 产品切换时带入标准默认值，用户仍可手工调整处理方式。
-function handleProductCategoryChange(productCategory) {
-  if (productCategory !== 'bond') {
-    form.bondCategory = ''
-    form.bondCode = ''
-    form.relatedTransactionId = ''
-    form.acquisitionPrice = null
-  }
-
-  if (productCategory === 'interbank') {
-    form.settlementHandling = 'impact'
-    form.accountingHandling = 'no_posting'
-  } else if (productCategory === 'bond') {
-    form.settlementHandling = 'no_impact'
-    form.accountingHandling = 'posting'
-  } else {
-    form.settlementHandling = ''
-    form.accountingHandling = ''
-  }
-}
 
 watch(() => form.effectiveDate, (effectiveDate) => {
   if (effectiveDate && form.expiryDate && form.expiryDate < effectiveDate) {
@@ -492,14 +691,13 @@ function fillForm(src) {
   Object.assign(form, {
     country:          src.country,
     productCategory:  src.productCategory,
-    bondCategory:     src.bondCategory || '',
     bondCode:         src.bondCode || '',
     relatedTransactionId: src.relatedTransactionId || '',
     acquisitionPrice: src.acquisitionPrice ?? null,
-    counterpartyTypes: Array.isArray(src.counterpartyTypes) ? [...src.counterpartyTypes] : (src.counterpartyType ? [src.counterpartyType] : []),
+    counterpartyTypes: src.productCategory === 'bond' ? [] : (Array.isArray(src.counterpartyTypes) ? [...src.counterpartyTypes] : (src.counterpartyType ? [src.counterpartyType] : [])),
     taxRate:          src.taxRate,
-    settlementHandling: src.settlementHandling || (src.productCategory === 'interbank' ? 'impact' : 'no_impact'),
-    accountingHandling: src.accountingHandling || (src.productCategory === 'bond' ? 'posting' : 'no_posting'),
+    settlementHandling: 'impact',
+    accountingHandling: src.productCategory === 'bond' ? 'posting' : 'no_posting',
     effectiveDate:    src.effectiveDate,
     expiryDate:       src.expiryDate,
     isActive:         src.isActive,
@@ -522,8 +720,8 @@ function openEdit(row) {
 
 function openCopy(row) {
   fillForm(row)
-  form.effectiveDate = ''    // 复制时要求重新设置有效期
-  form.expiryDate = ''
+  form.effectiveDate = getSystemDate()
+  form.expiryDate = '2099-12-30'
   form.sourceId = row.id
   dialogMode.value = 'copy'
   editId.value = null
@@ -537,15 +735,15 @@ async function handleSave() {
     const payload = {
       country:          form.country,
       productCategory:  form.productCategory,
-      bondCategory:     form.bondCategory || null,
+      bondCategory:     null,
       bondCode:         form.bondCode || null,
       relatedTransactionId: form.relatedTransactionId || null,
       acquisitionPrice: form.acquisitionPrice,
-      counterpartyTypes: form.counterpartyTypes,
+      counterpartyTypes: form.productCategory === 'bond' ? [] : form.counterpartyTypes,
       direction:        'pay',
       taxRate:          form.taxRate,
-      settlementHandling: form.settlementHandling,
-      accountingHandling: form.accountingHandling,
+      settlementHandling: 'impact',
+      accountingHandling: form.productCategory === 'bond' ? 'posting' : 'no_posting',
       effectiveDate:    form.effectiveDate,
       expiryDate:       form.expiryDate,
       isActive:         form.isActive,
@@ -574,6 +772,22 @@ async function handleSave() {
   flex-direction: column;
   gap: 12px;
   height: 100%;
+}
+
+.product-tabs {
+  flex-shrink: 0;
+  background: var(--git-surface);
+  padding: 0 16px;
+  border: 1px solid var(--git-border);
+  border-radius: 4px;
+}
+
+:deep(.product-tabs .el-tabs__header) {
+  margin: 0;
+}
+
+:deep(.product-tabs .el-tabs__nav-wrap::after) {
+  height: 1px;
 }
 
 .filter-bar {

@@ -9,6 +9,7 @@ FastAPI 应用，为前端提供：
 """
 
 from __future__ import annotations
+from datetime import date
 from typing import List, Literal, Optional
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -178,8 +179,8 @@ class SaveTaxRulePayload(BaseModel):
     taxRate: float
     settlementHandling: Literal["no_impact", "impact"]
     accountingHandling: Literal["no_posting", "posting"]
-    effectiveDate: str
-    expiryDate: str
+    effectiveDate: str = Field(default_factory=lambda: date.today().isoformat())
+    expiryDate: str = "2099-12-30"
     isActive: bool = True
     sourceId: Optional[str] = None   # 复制来源规则ID
 
@@ -191,6 +192,14 @@ class SaveTaxRulePayload(BaseModel):
             self.acquisitionPrice is None or self.acquisitionPrice <= 0
         ):
             raise ValueError("债券产品的购入价格必须大于 0")
+        if self.productCategory == "bond":
+            self.bondCategory = None
+            self.counterpartyTypes = []
+            self.settlementHandling = "impact"
+            self.accountingHandling = "posting"
+        elif self.productCategory == "interbank":
+            self.settlementHandling = "impact"
+            self.accountingHandling = "no_posting"
         if self.expiryDate < self.effectiveDate:
             raise ValueError("失效日期不能早于生效日期")
         return self
@@ -222,6 +231,8 @@ def _rule_to_camel(r: dict) -> dict:
 def list_tax_rules(
     country: Optional[str] = None,
     productCategory: Optional[str] = None,
+    relatedTransactionId: Optional[str] = None,
+    bondCode: Optional[str] = None,
     counterpartyTypes: Optional[str] = None,
     isActive: Optional[str] = None,
 ):
@@ -230,6 +241,14 @@ def list_tax_rules(
         rows = [r for r in rows if r["country"] == country]
     if productCategory:
         rows = [r for r in rows if r["product_category"] == productCategory]
+    if relatedTransactionId:
+        keyword = relatedTransactionId.strip().lower()
+        rows = [
+            r for r in rows
+            if keyword in (r.get("related_transaction_id") or "").lower()
+        ]
+    if bondCode:
+        rows = [r for r in rows if r.get("bond_code") == bondCode]
     if counterpartyTypes:
         allowed = [v.strip() for v in counterpartyTypes.split(",") if v.strip()]
         rows = [r for r in rows if any(t in allowed for t in r["counterparty_types"])]

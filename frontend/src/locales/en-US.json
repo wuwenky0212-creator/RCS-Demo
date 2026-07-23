@@ -243,6 +243,14 @@
     "noData": "No data. Please complete trade information first."
   },
   "taxRule": {
+    "bondRulesTab": "Bond Tax Rules",
+    "interbankRulesTab": "Interbank Tax Rules",
+    "importBtn": "Import",
+    "exportBtn": "Export",
+    "importSuccess": "Successfully imported {count} rules",
+    "exportSuccess": "Export successful",
+    "importEmpty": "No usable data found in the import file",
+    "importInvalid": "Incomplete data in row {row}: {field}",
     "country": "Country / Region",
     "productCategory": "Product Category",
     "counterpartyTypes": "Counterparty Type",

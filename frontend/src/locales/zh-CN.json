@@ -243,6 +243,14 @@
     "noData": "暂无数据，请先完善交易信息"
   },
   "taxRule": {
+    "bondRulesTab": "债券税费规则",
+    "interbankRulesTab": "拆借税费规则",
+    "importBtn": "导入",
+    "exportBtn": "导出",
+    "importSuccess": "成功导入 {count} 条规则",
+    "exportSuccess": "导出成功",
+    "importEmpty": "导入文件中没有可用数据",
+    "importInvalid": "第 {row} 行数据不完整：{field}",
     "country": "国家/地区",
     "productCategory": "产品类别",
     "counterpartyTypes": "交易对手分类",
