@@ -233,7 +233,7 @@
             </div>
 
             <!-- 到期日：单列 -->
-            <div class="fs-row">
+            <div class="fs-row fs-row--last">
               <div class="fs-label">{{ t('te.maturityDate') }} <span class="req">*</span></div>
               <div class="fs-value">
                 <el-date-picker v-model="fxFwd.maturityDate" type="date" :placeholder="t('te.selectDate')"
@@ -242,7 +242,7 @@
             </div>
 
             <!-- 期限(天)：只读展示 -->
-            <div class="fs-row fs-row--last">
+            <div class="fs-row">
               <div class="fs-label">{{ t('te.tenor') }}</div>
               <div class="fs-value"><span class="plain-val">{{ fxFwd.tenor || 0 }}</span></div>
             </div>
@@ -268,7 +268,7 @@
           <div class="fs-card">
             <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secRemarks') }}</div>
 
-            <div class="fs-row">
+            <div class="fs-row fs-row--last">
               <div class="fs-label">{{ t('te.tradeNature') }} <span class="req">*</span></div>
               <div class="fs-value">
                 <el-select v-model="fxFwd.tradeNature" size="small" style="width:100%">
@@ -936,7 +936,7 @@
             </div>
 
             <!-- 到期日 -->
-            <div class="fs-row">
+            <div class="fs-row fs-row--last">
               <div class="fs-label">{{ t('te.maturityDate') }} <span class="req">*</span></div>
               <div class="fs-value">
                 <el-date-picker v-model="ib.maturityDate" type="date" value-format="YYYY-MM-DD"
@@ -1154,16 +1154,11 @@
               </div>
             </div>
 
-            <!-- 本金交换方式 -->
+            <!-- NDCCS 固定为无本金交换，保留 CCS 同位置的展示语义 -->
             <div class="fs-row">
-              <div class="fs-label">{{ t('te.ndccsPrincipalExchange') }} <span class="req">*</span></div>
+              <div class="fs-label">{{ t('te.ndccsPrincipalExchange') }}</div>
               <div class="fs-value">
-                <el-select v-model="ndccs.principalExchange" size="small" style="width:100%">
-                  <el-option label="Begin" value="begin" />
-                  <el-option label="End"   value="end" />
-                  <el-option label="Both"  value="both" />
-                  <el-option label="None"  value="none" />
-                </el-select>
+                <el-input :model-value="t('te.ndccsNoPrincipalExchange')" size="small" disabled class="ndccs-principal-exchange" />
               </div>
             </div>
 
@@ -1199,13 +1194,55 @@
                   value-format="YYYY-MM-DD" size="small" style="width:100%" @change="calcNdccsTenor" />
               </div>
             </div>
+
           </div>
 
-          <!-- ② 计息方式 -->
+          <!-- ② 非交割结算设置 -->
+          <div class="fs-card">
+            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.ndccsSecSettlement') }}</div>
+
+            <div class="fs-row">
+              <div class="fs-label">{{ t('te.ndccsSettlementCurrency') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-select v-model="ndccs.settlementCurrency" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%" :disabled="!ndccs.currencyPair">
+                  <el-option v-for="ccy in ndccsSettlementCurrencyOptions" :key="ccy" :label="ccy" :value="ccy" />
+                </el-select>
+              </div>
+            </div>
+
+            <template v-if="ndccsUsesThirdSettlement">
+              <div class="fs-row">
+                <div class="fs-label">{{ t('te.ndccsFxPriceIndexForCurrency', { currency: ndccsPayCcy, settlementCurrency: ndccs.settlementCurrency }) }} <span class="req">*</span></div>
+                <div class="fs-value">
+                  <el-select v-model="ndccs.fxPriceIndexPrimary" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%">
+                    <el-option v-for="item in ndccsFxPriceIndexOptions(ndccsPayCcy)" :key="item.value" :label="item.label" :value="item.value" />
+                  </el-select>
+                </div>
+              </div>
+              <div class="fs-row fs-row--last">
+                <div class="fs-label">{{ t('te.ndccsFxPriceIndexForCurrency', { currency: ndccsRecCcy, settlementCurrency: ndccs.settlementCurrency }) }} <span class="req">*</span></div>
+                <div class="fs-value">
+                  <el-select v-model="ndccs.fxPriceIndexSecondary" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%">
+                    <el-option v-for="item in ndccsFxPriceIndexOptions(ndccsRecCcy)" :key="item.value" :label="item.label" :value="item.value" />
+                  </el-select>
+                </div>
+              </div>
+            </template>
+            <div v-else class="fs-row fs-row--last">
+              <div class="fs-label">{{ t('te.ndccsFxPriceIndex') }} <span class="req">*</span></div>
+              <div class="fs-value">
+                <el-select v-model="ndccs.fxPriceIndexPrimary" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%" :disabled="!ndccs.currencyPair">
+                  <el-option v-for="item in ndccsFxPriceIndexOptions()" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+              </div>
+            </div>
+          </div>
+
+          <!-- ③ 计息方式 -->
           <div class="fs-card">
             <div class="fs-title"><span class="fs-bar"></span>{{ t('te.ndccsSecInterestMethod') }}</div>
 
-            <!-- Rec / Pay：方向 + 计息类型 + 自动填入货币 -->
+            <!-- Rec / Pay：方向、利率类型和自动带出的利息货币 -->
             <div class="fs-row">
               <div class="fs-label">Rec/Pay</div>
               <div class="fs-cols fs-cols--2">
@@ -1216,13 +1253,8 @@
                     <el-option label="Float" value="float" />
                     <el-option label="Fixed" value="fixed" />
                   </el-select>
+                  <span class="ndccs-leg-currency">{{ ndccsPayCcy || t('te.autoFill') }}</span>
                 </div>
-                <div class="fc fc--autofill">{{ ndccsPayCcy || t('te.autoFill') }}</div>
-              </div>
-            </div>
-            <div class="fs-row">
-              <div class="fs-label"></div>
-              <div class="fs-cols fs-cols--2">
                 <div class="fc">
                   <span class="dir-tag dir-buy">Rec</span>
                   <el-icon class="swap-icon"><Sort /></el-icon>
@@ -1230,31 +1262,49 @@
                     <el-option label="Float" value="float" />
                     <el-option label="Fixed" value="fixed" />
                   </el-select>
+                  <span class="ndccs-leg-currency">{{ ndccsRecCcy || t('te.autoFill') }}</span>
                 </div>
-                <div class="fc fc--autofill">{{ ndccsRecCcy || t('te.autoFill') }}</div>
               </div>
             </div>
 
-            <!-- 浮动利率指标 -->
+            <!-- 根据利率类型展示浮动指标或固定利率 -->
             <div class="fs-row">
-              <div class="fs-label">{{ t('te.ndccsFloatIndex') }} <span class="req">*</span></div>
+              <div class="fs-label">{{ t('te.ndccsRateSetting') }} <span class="req">*</span></div>
               <div class="fs-cols fs-cols--2">
                 <div class="fc">
-                  <el-select v-model="ndccs.payFloatIndex" :placeholder="t('te.selectPlaceholder')" size="small" style="flex:1;min-width:0" clearable />
-                  <el-icon class="hd-icon" style="flex-shrink:0"><EditPen /></el-icon>
+                  <template v-if="ndccs.payRateType === 'float'">
+                    <el-select v-model="ndccs.payFloatIndex" :placeholder="t('te.ndccsFloatIndex')" size="small" style="flex:1;min-width:0">
+                      <el-option v-for="item in ndccsRateIndexOptions(ndccsPayCcy)" :key="item" :label="item" :value="item" />
+                    </el-select>
+                  </template>
+                  <el-input v-else v-model="ndccs.payFixedRate" :placeholder="t('te.ndccsFixedRate')" size="small" style="width:100%">
+                    <template #append>%</template>
+                  </el-input>
+                  <el-tooltip :content="t('te.ndccsEditRules')">
+                    <button type="button" class="ndccs-rule-editor" @click="openNdccsRuleEditor('pay')"><el-icon><EditPen /></el-icon></button>
+                  </el-tooltip>
                 </div>
                 <div class="fc">
-                  <el-select v-model="ndccs.recFloatIndex" :placeholder="t('te.selectPlaceholder')" size="small" style="flex:1;min-width:0" clearable />
-                  <el-icon class="hd-icon" style="flex-shrink:0"><EditPen /></el-icon>
+                  <template v-if="ndccs.recRateType === 'float'">
+                    <el-select v-model="ndccs.recFloatIndex" :placeholder="t('te.ndccsFloatIndex')" size="small" style="flex:1;min-width:0">
+                      <el-option v-for="item in ndccsRateIndexOptions(ndccsRecCcy)" :key="item" :label="item" :value="item" />
+                    </el-select>
+                  </template>
+                  <el-input v-else v-model="ndccs.recFixedRate" :placeholder="t('te.ndccsFixedRate')" size="small" style="width:100%">
+                    <template #append>%</template>
+                  </el-input>
+                  <el-tooltip :content="t('te.ndccsEditRules')">
+                    <button type="button" class="ndccs-rule-editor" @click="openNdccsRuleEditor('rec')"><el-icon><EditPen /></el-icon></button>
+                  </el-tooltip>
                 </div>
               </div>
             </div>
 
-            <!-- 汇率：单列全宽 -->
+            <!-- 当前标的货币对的即期市场价格 -->
             <div class="fs-row">
-              <div class="fs-label">{{ t('te.ndccsFxRate') }} <span class="req">*</span></div>
+              <div class="fs-label">{{ t('te.ndccsCurrentSpotRate', { pair: ndccs.currencyPair || '--/--' }) }}</div>
               <div class="fs-value">
-                <el-input v-model="ndccs.fxRate" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" />
+                <el-input v-model="ndccs.currentSpotRate" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" :disabled="!ndccs.currencyPair" />
               </div>
             </div>
 
@@ -1377,7 +1427,7 @@
             </div>
           </div>
 
-          <!-- ③ 交易账户 -->
+          <!-- ④ 交易账户 -->
           <div class="fs-card">
             <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secTradeAccount') }}</div>
 
@@ -1397,7 +1447,7 @@
             </div>
           </div>
 
-          <!-- ④ 备注 -->
+          <!-- ⑤ 备注 -->
           <div class="fs-card">
             <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secRemarks') }}</div>
 
@@ -1430,18 +1480,6 @@
             <div class="fs-row fs-row--last">
               <div class="fs-label">{{ t('te.remarks') }}</div>
               <div class="fs-value"><el-input v-model="ndccs.remark" :placeholder="t('te.inputPlaceholder')" size="small" style="width:100%" /></div>
-            </div>
-          </div>
-
-          <!-- ⑤ 拓展字段 -->
-          <div class="fs-card">
-            <div class="fs-title"><span class="fs-bar"></span>{{ t('te.secExtFields') }}</div>
-            <div class="fs-row" v-for="(ext, idx) in ndccsExtFields" :key="ext.key"
-              :class="{ 'fs-row--last': idx === ndccsExtFields.length - 1 }">
-              <div class="fs-label">{{ ext.label }}</div>
-              <div class="fs-value">
-                <el-select v-model="ndccs[ext.key]" :placeholder="t('te.selectPlaceholder')" size="small" style="width:100%" clearable />
-              </div>
             </div>
           </div>
 
@@ -1667,6 +1705,78 @@
       </div>
 
     </div>
+
+    <el-dialog v-model="ndccsRuleDialogVisible" :title="t('te.ndccsRuleEditTitle')" width="680px" class="ndccs-rule-dialog" :close-on-click-modal="false">
+      <div class="ndccs-rule-body">
+        <section class="ndccs-rule-section">
+          <div class="ndccs-rule-heading"><span class="fs-bar"></span>{{ t('te.ndccsRuleStructure') }}</div>
+          <div class="ndccs-rule-grid">
+            <label>{{ t('te.ndccsFloatRateMultiplier') }} <span class="req">*</span></label>
+            <el-input v-model="ndccsRuleDraft.floatRateMultiplier" size="small" />
+            <label>{{ t('te.ndccsFloatSpread') }}</label>
+            <el-input v-model="ndccsRuleDraft.floatSpread" size="small" />
+          </div>
+        </section>
+
+        <section class="ndccs-rule-section">
+          <div class="ndccs-rule-heading"><span class="fs-bar"></span>{{ t('te.ndccsRuleBasic') }}</div>
+          <div class="ndccs-rule-grid">
+            <label>{{ t('te.ndccsCashflowDirection') }}</label>
+            <el-select v-model="ndccsRuleDraft.cashflowDirection" size="small"><el-option label="从前往后" value="from-front" /><el-option label="从后往前" value="from-back" /></el-select>
+            <label>{{ t('te.ibPayConvention') }}</label>
+            <el-select v-model="ndccsRuleDraft.payConvention" size="small"><el-option label="Modified Following" value="Modified Following" /><el-option label="Following" value="Following" /><el-option label="Preceding" value="Preceding" /></el-select>
+            <label>{{ t('te.ndccsInterestRemainder') }}</label>
+            <el-select v-model="ndccsRuleDraft.interestRemainder" size="small"><el-option label="后置" value="back" /><el-option label="前置" value="front" /></el-select>
+            <label>{{ t('te.ndccsPaymentTiming') }}</label>
+            <div class="ndccs-rule-split"><el-select v-model="ndccsRuleDraft.paymentTiming" size="small"><el-option label="期初" value="start" /><el-option label="期末" value="end" /></el-select><el-input v-model="ndccsRuleDraft.paymentDelay" size="small"><template #prepend>延迟</template></el-input></div>
+            <label>{{ t('te.ndccsFixingTiming') }}</label>
+            <div class="ndccs-rule-split"><el-select v-model="ndccsRuleDraft.fixingTiming" size="small"><el-option label="期初" value="start" /><el-option label="期末" value="end" /></el-select><el-input v-model="ndccsRuleDraft.fixingAdvance" size="small"><template #prepend>提前</template></el-input></div>
+            <label>{{ t('te.ndccsLockDays') }}</label>
+            <div class="ndccs-rule-split"><el-input v-model="ndccsRuleDraft.lockDays" size="small" /><el-input v-model="ndccsRuleDraft.lockOffset" size="small"><template #prepend>偏移</template></el-input></div>
+            <label>{{ t('te.ndccsCalculationMethod') }} <span class="req">*</span></label>
+            <el-select v-model="ndccsRuleDraft.calculationMethod" size="small"><el-option label="简单平均" value="simple-average" /><el-option label="复利平均" value="compound-average" /></el-select>
+            <label>{{ t('te.ndccsOffsetMethod') }} <span class="req">*</span></label>
+            <el-select v-model="ndccsRuleDraft.offsetMethod" size="small"><el-option label="回看" value="rollback" /><el-option label="锁定" value="lockout" /></el-select>
+            <label>{{ t('te.ndccsIndexHoliday') }}</label>
+            <el-select v-model="ndccsRuleDraft.indexHolidays" multiple size="small"><el-option label="USD" value="USD" /><el-option label="IDR" value="IDR" /><el-option label="CNY" value="CNY" /></el-select>
+            <label>{{ t('te.ndccsRecalculateInterest') }}</label>
+            <el-checkbox v-model="ndccsRuleDraft.recalculateInterest" />
+          </div>
+        </section>
+
+        <section class="ndccs-rule-section">
+          <div class="ndccs-rule-heading"><span class="fs-bar"></span>{{ t('te.ndccsRuleRate') }}</div>
+          <div class="ndccs-rule-grid">
+            <label>{{ t('te.ndccsFirstResetDate') }}</label>
+            <el-date-picker v-model="ndccsRuleDraft.firstResetDate" type="date" value-format="YYYY-MM-DD" size="small" style="width:100%" />
+            <label>{{ t('te.ndccsFirstCouponDate') }}</label>
+            <el-date-picker v-model="ndccsRuleDraft.firstCouponDate" type="date" value-format="YYYY-MM-DD" size="small" style="width:100%" />
+            <label>{{ t('te.ndccsInitialRate') }}</label>
+            <el-input v-model="ndccsRuleDraft.initialRate" size="small" />
+          </div>
+        </section>
+
+        <section class="ndccs-rule-section">
+          <div class="ndccs-rule-heading"><span class="fs-bar"></span>{{ t('te.ndccsRuleAmortization') }}</div>
+          <div class="ndccs-rule-grid">
+            <label>{{ t('te.ndccsAmortizationForm') }}</label>
+            <div class="ndccs-rule-split"><el-select v-model="ndccsRuleDraft.amortizationForm" size="small"><el-option label="None" value="none" /><el-option label="Fixed Amount" value="fixed" /></el-select><el-select v-model="ndccsRuleDraft.amortizationDirection" size="small"><el-option label="递减" value="reduce" /><el-option label="递增" value="increase" /></el-select></div>
+            <label>{{ t('te.ndccsAmortizationAmount') }}</label>
+            <el-input v-model="ndccsRuleDraft.amortizationAmount" size="small" :disabled="ndccsRuleDraft.amortizationForm === 'none'" />
+            <label>{{ t('te.ndccsAmortizationFrequency') }}</label>
+            <el-select v-model="ndccsRuleDraft.amortizationFrequency" size="small" :disabled="ndccsRuleDraft.amortizationForm === 'none'"><el-option label="1M" value="1M" /><el-option label="3M" value="3M" /><el-option label="6M" value="6M" /></el-select>
+            <label>{{ t('te.ndccsAmortizationStart') }}</label>
+            <el-date-picker v-model="ndccsRuleDraft.amortizationStart" type="date" value-format="YYYY-MM-DD" size="small" style="width:100%" :disabled="ndccsRuleDraft.amortizationForm === 'none'" />
+            <label>{{ t('te.ndccsAmortizationEnd') }}</label>
+            <el-date-picker v-model="ndccsRuleDraft.amortizationEnd" type="date" value-format="YYYY-MM-DD" size="small" style="width:100%" :disabled="ndccsRuleDraft.amortizationForm === 'none'" />
+          </div>
+        </section>
+      </div>
+      <template #footer>
+        <el-button size="small" @click="ndccsRuleDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button size="small" type="primary" @click="saveNdccsRuleEditor">{{ t('common.confirm') }}</el-button>
+      </template>
+    </el-dialog>
 
   </div>
 </template>
@@ -2075,16 +2185,24 @@ watch(() => ib.interestType, (val) => {
 function emptyNdccs() {
   return {
     currencyPair:        '',
-    principalExchange:   'begin',
     tradeDate:           today,
     tradeTime:            nowTime,
     valueDate:           '',
     maturityDate:        '',
     tenor:               '',
 
+    // 默认以 Rec 端货币结算；选择第三结算货币时需分别配置两端的汇率价格指标。
+    settlementCurrency:  '',
+    fxPriceIndexPrimary: '',
+    fxPriceIndexSecondary: '',
+    currentSpotRate:     '',
+    payRuleConfig:       emptyNdccsRuleConfig(),
+    recRuleConfig:       emptyNdccsRuleConfig(),
+
     // Pay 端
     payRateType:         'float',
     payFloatIndex:       '',
+    payFixedRate:        '',
     payNotional:         '',
     payInterestFreq:     '6M',
     payInterestType:     'simple',
@@ -2098,6 +2216,7 @@ function emptyNdccs() {
     // Rec 端
     recRateType:         'float',
     recFloatIndex:       '',
+    recFixedRate:        '',
     recNotional:         '',
     recInterestFreq:     '6M',
     recInterestType:     'simple',
@@ -2108,8 +2227,6 @@ function emptyNdccs() {
     recAdjusted:         false,
     recEOMA:             false,
 
-    fxRate:              '',
-
     account:             '',
     counterparty:        '',
 
@@ -2119,23 +2236,121 @@ function emptyNdccs() {
     purpose:             '',
     remark:              '',
 
-    // 拓展字段：Pay / Rec 各 4 条结算路径
-    extPayOurRecv:       '',
-    extPayCounterPay:    '',
-    extPayOurPay:        '',
-    extPayCounterRecv:   '',
-    extRecOurRecv:       '',
-    extRecCounterPay:    '',
-    extRecOurPay:        '',
-    extRecCounterRecv:   '',
   }
 }
 
 const ndccs = reactive(emptyNdccs())
 
+function emptyNdccsRuleConfig() {
+  return {
+    floatRateMultiplier: '1.0000',
+    floatSpread:         '0.0000',
+    cashflowDirection:   'from-back',
+    payConvention:       'Modified Following',
+    interestRemainder:   'back',
+    paymentTiming:       'end',
+    paymentDelay:        0,
+    fixingTiming:        'start',
+    fixingAdvance:       0,
+    lockDays:            0,
+    lockOffset:          0,
+    calculationMethod:   'simple-average',
+    offsetMethod:        'rollback',
+    indexHolidays:       [],
+    recalculateInterest: false,
+    firstResetDate:      '',
+    firstCouponDate:     '',
+    initialRate:         '',
+    amortizationForm:    'none',
+    amortizationDirection: 'reduce',
+    amortizationAmount:  '',
+    amortizationFrequency: '',
+    amortizationStart:   '',
+    amortizationEnd:     '',
+  }
+}
+
+const ndccsRuleDialogVisible = ref(false)
+const ndccsRuleEditorLeg = ref('pay')
+const ndccsRuleDraft = reactive(emptyNdccsRuleConfig())
+
+function openNdccsRuleEditor(leg) {
+  ndccsRuleEditorLeg.value = leg
+  Object.assign(ndccsRuleDraft, cloneNdccsRuleConfig(leg === 'pay' ? ndccs.payRuleConfig : ndccs.recRuleConfig))
+  ndccsRuleDialogVisible.value = true
+}
+
+function saveNdccsRuleEditor() {
+  Object.assign(ndccsRuleEditorLeg.value === 'pay' ? ndccs.payRuleConfig : ndccs.recRuleConfig, cloneNdccsRuleConfig(ndccsRuleDraft))
+  ndccsRuleDialogVisible.value = false
+}
+
+function cloneNdccsRuleConfig(config) {
+  return JSON.parse(JSON.stringify(config))
+}
+
 // 货币对变更时自动同步 Pay / Rec 两端货币展示（取货币对左右两侧）
 const ndccsPayCcy = computed(() => ndccs.currencyPair.includes('/') ? ndccs.currencyPair.split('/')[0] : '')
 const ndccsRecCcy = computed(() => ndccs.currencyPair.includes('/') ? ndccs.currencyPair.split('/')[1] : '')
+
+const ndccsSettlementCurrencies = computed(() => [ndccsPayCcy.value, ndccsRecCcy.value].filter(Boolean))
+const ndccsSupportedCurrencies = ['USD', 'IDR', 'CNY', 'CNH', 'EUR', 'JPY']
+const ndccsSettlementCurrencyOptions = computed(() => [
+  ...ndccsSettlementCurrencies.value,
+  ...ndccsSupportedCurrencies.filter(currency => !ndccsSettlementCurrencies.value.includes(currency)),
+])
+const ndccsUsesThirdSettlement = computed(() => Boolean(
+  ndccs.settlementCurrency && !ndccsSettlementCurrencies.value.includes(ndccs.settlementCurrency),
+))
+
+function ndccsFxPriceIndexOptions(sourceCurrency) {
+  if (!ndccs.currencyPair || !ndccs.settlementCurrency) return []
+  const pair = sourceCurrency
+    ? `${sourceCurrency}/${ndccs.settlementCurrency}`
+    : ndccs.currencyPair
+  return [{ label: pair, value: pair }]
+}
+
+function setNdccsFxPriceIndexes() {
+  if (!ndccs.currencyPair || !ndccs.settlementCurrency) {
+    ndccs.fxPriceIndexPrimary = ''
+    ndccs.fxPriceIndexSecondary = ''
+    return
+  }
+
+  if (ndccsUsesThirdSettlement.value) {
+    ndccs.fxPriceIndexPrimary = `${ndccsPayCcy.value}/${ndccs.settlementCurrency}`
+    ndccs.fxPriceIndexSecondary = `${ndccsRecCcy.value}/${ndccs.settlementCurrency}`
+    return
+  }
+
+  ndccs.fxPriceIndexPrimary = ndccs.currencyPair
+  ndccs.fxPriceIndexSecondary = ''
+}
+
+function ndccsRateIndexOptions(currency) {
+  const indexes = {
+    USD: ['USD_SOFR_1M', 'USD_SOFR_3M'],
+    IDR: ['IDR_JIBOR_1M', 'IDR_JIBOR_3M'],
+    CNY: ['CNY_SHIBOR_1M', 'CNY_SHIBOR_3M'],
+    CNH: ['CNH_HIBOR_1M', 'CNH_HIBOR_3M'],
+    EUR: ['EUR_ESTR_1M', 'EUR_ESTR_3M'],
+    JPY: ['JPY_TONA_1M', 'JPY_TONA_3M'],
+  }
+  return indexes[currency] || []
+}
+
+watch([() => ndccs.currencyPair, () => ndccs.settlementCurrency], () => {
+  if (!ndccs.currencyPair) {
+    setNdccsFxPriceIndexes()
+    return
+  }
+  if (!ndccsSettlementCurrencyOptions.value.includes(ndccs.settlementCurrency)) {
+    ndccs.settlementCurrency = ndccsRecCcy.value
+    return
+  }
+  setNdccsFxPriceIndexes()
+})
 
 function calcNdccsTenor() {
   if (ndccs.valueDate && ndccs.maturityDate) {
@@ -2147,18 +2362,6 @@ function calcNdccsTenor() {
     ndccs.tenor = ''
   }
 }
-
-// 拓展字段行定义：Pay 端 4 条 + Rec 端 4 条结算路径
-const ndccsExtFields = computed(() => [
-  { key: 'extPayOurRecv',     label: t('te.ourRecvSettlePath') },
-  { key: 'extPayCounterPay',  label: t('te.counterPaySettlePath') },
-  { key: 'extPayOurPay',      label: t('te.ourPaySettlePath') },
-  { key: 'extPayCounterRecv', label: t('te.counterRecvSettlePath') },
-  { key: 'extRecOurRecv',     label: t('te.ourRecvSettlePath') },
-  { key: 'extRecCounterPay',  label: t('te.counterPaySettlePath') },
-  { key: 'extRecOurPay',      label: t('te.ourPaySettlePath') },
-  { key: 'extRecCounterRecv', label: t('te.counterRecvSettlePath') },
-])
 
 const bondFmt8 = v => Number(v || 0).toFixed(8)
 
@@ -2861,10 +3064,10 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
   }
 }
 
-/* ─── 行布局：24格栅，label 占 8 格(33.333%)，value 占 16 格(66.667%) ─── */
+/* ─── 行布局：标签列收窄，给业务输入保留更多空间 ─── */
 .fs-row {
   display: grid;
-  grid-template-columns: calc(8 / 24 * 100%) calc(16 / 24 * 100%);
+  grid-template-columns: 26% 74%;
   border-bottom: 1px solid #edf0f7;
   min-height: 38px;
 
@@ -2928,6 +3131,12 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
     gap: 5px;
     align-items: center;
   }
+
+  &--readonly {
+    color: #7a8599;
+    background: #f7f9fc;
+  }
+
 }
 
 /* ─── 多列值区（替代 fs-value 用于多格布局）─── */
@@ -3039,6 +3248,76 @@ const afPendCount = computed(() => avgFwdTrades.value.length - afPassCount.value
     }
   }
 }
+
+.ndccs-leg-currency {
+  flex-shrink: 0;
+  min-width: 42px;
+  padding-left: 8px;
+  color: #7a8599;
+  font-size: 12px;
+  border-left: 1px solid #edf0f7;
+}
+
+.ndccs-principal-exchange {
+  :deep(.el-input__wrapper) {
+    background: #f5f7fa !important;
+    box-shadow: 0 0 0 1px #dcdfe6 inset !important;
+    padding: 0 10px !important;
+  }
+
+  :deep(.el-input__inner) {
+    color: var(--git-text-2) !important;
+    -webkit-text-fill-color: var(--git-text-2) !important;
+  }
+}
+
+.ndccs-rule-editor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--git-primary);
+  background: #fff;
+  border: 1px solid #d9e2f1;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover { border-color: var(--git-primary); background: #eef4ff; }
+}
+
+:deep(.ndccs-rule-dialog) {
+  .el-dialog__body { padding: 0 18px; }
+  .el-dialog__footer { padding: 12px 18px 16px; }
+}
+
+.ndccs-rule-body {
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+  border-top: 1px solid #edf0f5;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.ndccs-rule-section { padding: 10px 0; border-bottom: 1px solid #edf0f5; }
+.ndccs-rule-section:last-child { border-bottom: none; }
+.ndccs-rule-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; color: var(--git-text-1); }
+
+.ndccs-rule-grid {
+  display: grid;
+  grid-template-columns: 142px minmax(0, 1fr);
+  border-top: 1px solid #e7ebf2;
+  border-left: 1px solid #e7ebf2;
+
+  > label,
+  > :not(label) { min-width: 0; min-height: 32px; box-sizing: border-box; border-right: 1px solid #e7ebf2; border-bottom: 1px solid #e7ebf2; }
+  > label { display: flex; align-items: center; padding: 0 8px; font-size: 12px; color: var(--git-text-2); background: #f7f8fb; }
+  > :not(label) { display: flex; align-items: center; padding: 3px 6px; }
+  :deep(.el-select), :deep(.el-input), :deep(.el-date-editor) { width: 100%; }
+}
+
+.ndccs-rule-split { display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px; }
 
 /* ─── 数字输入框 ─── */
 .input-number {
